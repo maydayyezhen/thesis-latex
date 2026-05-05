@@ -28,18 +28,7 @@ HearBridge 系统当前的核心业务可概括为两条主线：一是面向普
 
 （6）个人信息管理需求。用户应能够在个人中心查看和修改个人信息，并根据需要修改密码或退出登录。个人信息管理功能应保持操作简洁，避免影响用户使用训练和识别功能的主流程。
 
-\begin{figure}[H]
-  \centering
-  \fbox{
-    \begin{minipage}[c][6cm][c]{0.82\textwidth}
-      \centering
-      普通用户用例图占位\\
-      后续替换为 figures/chapter03/fig3-1-user-usecase.png
-    \end{minipage}
-  }
-  \caption{普通用户用例图}
-  \label{fig:user-usecase}
-\end{figure}
+\WhuDiagramFigure[0.92\textwidth][0.46\textheight]{diagrams/chapter03/fig3-1-user-usecase.tex}{普通用户用例图}{fig:user-usecase}
 
 如图~\ref{fig:user-usecase} 所示，普通用户可以完成登录、浏览手语资源、查看资源详情、观看动作示范、进行实时手势识别、上传句子视频进行识别、查看识别结果、查看语义修正结果、修改个人信息和退出登录等操作。这些用例共同构成普通用户在移动端的主要功能范围。
 
@@ -65,18 +54,7 @@ HearBridge 系统当前的核心业务可概括为两条主线：一是面向普
 
 （8）系统概览需求。管理员应能够查看系统概览信息，例如资源数量、样本数量、模型版本状态或其他运行概况，以便快速了解系统当前维护状态。
 
-\begin{figure}[H]
-  \centering
-  \fbox{
-    \begin{minipage}[c][6cm][c]{0.82\textwidth}
-      \centering
-      管理员用例图占位\\
-      后续替换为 figures/chapter03/fig3-2-admin-usecase.png
-    \end{minipage}
-  }
-  \caption{管理员用例图}
-  \label{fig:admin-usecase}
-\end{figure}
+\WhuDiagramFigure[0.92\textwidth][0.52\textheight]{diagrams/chapter03/fig3-2-admin-usecase.tex}{管理员用例图}{fig:admin-usecase}
 
 如图~\ref{fig:admin-usecase} 所示，系统管理员可以完成管理员登录、手势分类管理、手势资源管理、样本管理、模型训练管理、模型版本管理、发布模型、查看系统概览和退出登录等操作。这些功能共同支撑移动端训练内容维护和识别模型迭代。
 
@@ -86,18 +64,7 @@ HearBridge 系统当前的核心业务可概括为两条主线：一是面向普
 
 普通用户总体操作流程描述了用户从启动应用到完成主要功能操作的基本路径。用户启动应用后，系统首先判断当前是否已经登录；若用户未登录，则进入登录或注册页面，完成认证后进入应用主界面；若用户已登录，则可直接进入应用主界面。进入主界面后，用户可以根据需要选择首页、训练或我的等功能模块，并在对应模块中完成相关操作。
 
-\begin{figure}[H]
-  \centering
-  \fbox{
-    \begin{minipage}[c][6cm][c]{0.82\textwidth}
-      \centering
-      普通用户总体流程图占位\\
-      后续替换为 figures/chapter03/fig3-3-user-flow.png
-    \end{minipage}
-  }
-  \caption{普通用户总体流程图}
-  \label{fig:user-flow}
-\end{figure}
+\WhuDiagramFigure[0.78\textwidth][0.52\textheight]{diagrams/chapter03/fig3-3-user-flow.tex}{普通用户总体流程图}{fig:user-flow}
 
 如图~\ref{fig:user-flow} 所示，普通用户进入系统后可选择不同功能模块。首页主要用于使用快捷入口和查看首页内容，训练模块用于完成手势训练，个人中心用于完成资料修改、密码修改或退出登录等账号操作。该流程图主要从用户视角描述系统整体使用路径，不展开识别服务内部处理过程。
 
@@ -105,18 +72,7 @@ HearBridge 系统当前的核心业务可概括为两条主线：一是面向普
 
 实时手势训练是 HearBridge 移动端的重要功能之一，主要用于支持用户在观看手语动作示范后进行模仿练习。用户进入手势训练页面后，首先查看手语资源信息和动作示范内容；随后开始练习，并按照页面提示对准摄像头完成手势动作；系统将识别结果以实时反馈形式展示给用户，用户可根据结果决定是否继续练习。
 
-\begin{figure}[H]
-  \centering
-  \fbox{
-    \begin{minipage}[c][6cm][c]{0.82\textwidth}
-      \centering
-      实时手势训练流程图占位\\
-      后续替换为 figures/chapter03/fig3-4-training-flow.png
-    \end{minipage}
-  }
-  \caption{实时手势训练流程图}
-  \label{fig:training-flow}
-\end{figure}
+\WhuDiagramFigure[0.68\textwidth][0.55\textheight]{diagrams/chapter03/fig3-4-training-flow.tex}{实时手势训练流程图}{fig:training-flow}
 
 如图~\ref{fig:training-flow} 所示，实时手势训练流程以用户操作为中心，重点描述用户如何进入训练页面、观看示范、完成手势动作并查看实时识别结果。对于图像帧传输、关键点提取和模型推理等内部处理过程，将在后续系统设计与实现章节中说明。
 
@@ -124,18 +80,7 @@ HearBridge 系统当前的核心业务可概括为两条主线：一是面向普
 
 句子视频识别是 HearBridge 系统在受限场景下进行辅助交流探索的重要功能。用户进入句子视频识别页面后，选择本地手语视频并提交识别请求。系统完成识别后，用户可以先查看原始识别结果，再查看语义修正结果。若用户需要继续识别其他视频，可以重新选择本地视频；若不再继续识别，则可结束操作或返回首页。
 
-\begin{figure}[H]
-  \centering
-  \fbox{
-    \begin{minipage}[c][6cm][c]{0.82\textwidth}
-      \centering
-      句子视频识别流程图占位\\
-      后续替换为 figures/chapter03/fig3-5-sentence-video-flow.png
-    \end{minipage}
-  }
-  \caption{句子视频识别流程图}
-  \label{fig:sentence-video-flow}
-\end{figure}
+\WhuDiagramFigure[0.68\textwidth][0.55\textheight]{diagrams/chapter03/fig3-5-sentence-video-flow.tex}{句子视频识别流程图}{fig:sentence-video-flow}
 
 如图~\ref{fig:sentence-video-flow} 所示，句子视频识别流程主要体现用户侧可感知的操作步骤，包括进入识别页面、选择视频、提交识别、等待识别完成、查看原始识别结果和查看语义修正结果。该流程不直接展开 Python 识别服务和 DeepSeek 语义修正的内部实现细节。
 

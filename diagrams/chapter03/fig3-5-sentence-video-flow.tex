@@ -1,0 +1,46 @@
+﻿\begin{tikzpicture}[
+  font=\songti\zihao{5},
+  node distance=0.72cm,
+  startstop/.style={
+    draw,
+    rounded corners,
+    align=center,
+    minimum width=3.2cm,
+    minimum height=0.78cm
+  },
+  process/.style={
+    draw,
+    rectangle,
+    align=center,
+    minimum width=3.6cm,
+    minimum height=0.78cm
+  },
+  decision/.style={
+    draw,
+    diamond,
+    aspect=2.0,
+    align=center,
+    inner sep=1pt,
+    minimum width=3.0cm
+  },
+  arrow/.style={-{Stealth[length=2mm]}, thick}
+]
+
+\node[startstop] (start) {进入句子视频识别页};
+\node[process, below=of start] (select) {选择本地视频};
+\node[process, below=of select] (submit) {提交识别请求};
+\node[process, below=of submit] (wait) {等待识别完成};
+\node[process, below=of wait] (result) {查看识别结果\\（原始结果与语义修正结果）};
+\node[decision, below=0.95cm of result] (again) {是否继续识别};
+\node[startstop, below=0.95cm of again] (end) {结束或返回首页};
+
+\draw[arrow] (start) -- (select);
+\draw[arrow] (select) -- (submit);
+\draw[arrow] (submit) -- (wait);
+\draw[arrow] (wait) -- (result);
+\draw[arrow] (result) -- (again);
+\draw[arrow] (again) -- node[right] {否} (end);
+
+\draw[arrow] (again.east) -- ++(1.6,0) |- node[pos=0.20,right] {是} (select.east);
+
+\end{tikzpicture}

@@ -38,12 +38,56 @@
 % ==============================
 
 \usepackage{graphicx}
+\usepackage{adjustbox}
+\usepackage{xparse}
+
+% ==============================
+% 统一图片插入命令
+% ==============================
+
+% 用于插入 TikZ / PlantUML 等 LaTeX 源码图。
+% 参数：
+% #1 最大宽度，默认 0.86\textwidth
+% #2 最大高度，默认 0.58\textheight
+% #3 图源码路径
+% #4 图标题
+% #5 图标签
+\NewDocumentCommand{\WhuDiagramFigure}{O{0.86\textwidth} O{0.58\textheight} m m m}{%
+  \begin{figure}[H]
+    \centering
+    \begin{adjustbox}{max totalsize={#1}{#2},center}
+      \input{#3}
+    \end{adjustbox}
+    \caption{#4}
+    \label{#5}
+  \end{figure}
+}
+
+% 用于插入 PNG / JPG / PDF 等图片文件。
+% 参数：
+% #1 最大宽度，默认 0.86\textwidth
+% #2 最大高度，默认 0.58\textheight
+% #3 图片路径
+% #4 图标题
+% #5 图标签
+\NewDocumentCommand{\WhuImageFigure}{O{0.86\textwidth} O{0.58\textheight} m m m}{%
+  \begin{figure}[H]
+    \centering
+    \begin{adjustbox}{max totalsize={#1}{#2},center}
+      \includegraphics{#3}
+    \end{adjustbox}
+    \caption{#4}
+    \label{#5}
+  \end{figure}
+}
 \usepackage{float}
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{longtable}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit}
 
 % 图、表、公式按章编号
 \numberwithin{figure}{chapter}
@@ -230,3 +274,7 @@
 \input{backmatter/appendix}
 
 \end{document}
+
+
+
+

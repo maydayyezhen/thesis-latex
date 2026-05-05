@@ -1,0 +1,29 @@
+﻿\begin{tikzpicture}[
+  font=\songti\zihao{5},
+  node distance=1.0cm,
+  startstop/.style={draw, rounded corners, align=center, minimum width=3.0cm, minimum height=0.8cm},
+  process/.style={draw, rectangle, align=center, minimum width=3.3cm, minimum height=0.8cm},
+  decision/.style={draw, diamond, aspect=2.0, align=center, inner sep=1pt, minimum width=3.2cm},
+  arrow/.style={-{Stealth[length=2mm]}, thick}
+]
+
+\node[startstop] (start) {进入手势训练页面};
+\node[process, below=of start] (info) {查看手语资源信息};
+\node[process, below=of info] (demo) {观看动作示范};
+\node[process, below=of demo] (practice) {开始练习};
+\node[process, below=of practice] (camera) {对准摄像头完成手势动作};
+\node[process, below=of camera] (result) {查看实时识别结果};
+\node[decision, below=of result] (continue) {是否继续练习};
+\node[startstop, below=of continue] (end) {结束练习};
+
+\draw[arrow] (start) -- (info);
+\draw[arrow] (info) -- (demo);
+\draw[arrow] (demo) -- (practice);
+\draw[arrow] (practice) -- (camera);
+\draw[arrow] (camera) -- (result);
+\draw[arrow] (result) -- (continue);
+\draw[arrow] (continue) -- node[right] {否} (end);
+\draw[arrow] (continue.east) -- ++(2.0,0) |- node[pos=0.25,right] {是} (camera.east);
+
+\end{tikzpicture}
+
