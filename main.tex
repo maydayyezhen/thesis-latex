@@ -1,23 +1,162 @@
-﻿\documentclass[UTF8]{ctexart}
+﻿\documentclass[UTF8,fontset=windows,zihao=-4,oneside,openany]{ctexbook}
 
-\usepackage{geometry}
-\geometry{a4paper, margin=2.5cm}
+% ==============================
+% 基础页面设置
+% ==============================
+
+\usepackage[
+  a4paper,
+  left=25mm,
+  right=20mm,
+  top=25mm,
+  bottom=20mm
+]{geometry}
+
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
 
 \usepackage{graphicx}
-\usepackage{hyperref}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\numberwithin{equation}{chapter}
 
-\title{毕业论文 LaTeX 项目}
-\author{夜真}
-\date{\today}
+\usepackage{caption}
+\DeclareCaptionFont{wuhao}{\zihao{5}}
+\DeclareCaptionLabelSeparator{whuspace}{\quad}
+\captionsetup{
+  font=wuhao,
+  labelfont=bf,
+  textfont=bf,
+  labelsep=whuspace
+}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\songti\zihao{5} 武汉大学本科毕业论文（设计）}
+\fancyfoot[C]{\songti\zihao{5} \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyhead[C]{\songti\zihao{5} 武汉大学本科毕业论文（设计）}
+  \fancyfoot[C]{\songti\zihao{5} \thepage}
+  \renewcommand{\headrulewidth}{0.4pt}
+}
+
+\usepackage[
+  backend=biber,
+  style=gb7714-2015,
+  gbnamefmt=lowercase
+]{biblatex}
+\addbibresource{refs/references.bib}
+
+\usepackage[hidelinks]{hyperref}
+
+% ==============================
+% 标题层级设置
+% ==============================
+
+\ctexset{
+  chapter = {
+    name = {},
+    number = \thechapter,
+    format = \centering\heiti\zihao{-2},
+    aftername = \quad,
+    beforeskip = 0pt,
+    afterskip = 24pt,
+    fixskip = true
+  },
+  section = {
+    format = \heiti\zihao{4},
+    beforeskip = 18pt,
+    afterskip = 6pt
+  },
+  subsection = {
+    format = \heiti\zihao{-4},
+    beforeskip = 12pt,
+    afterskip = 6pt
+  },
+  subsubsection = {
+    format = \heiti\zihao{-4},
+    beforeskip = 12pt,
+    afterskip = 6pt
+  }
+}
+
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+
+% ==============================
+% 论文基础信息
+% 后续只需要改这里
+% ==============================
+
+\newcommand{\ThesisTitleCN}{听桥：面向听障交流与训练的多端协同系统设计与实现}
+\newcommand{\ThesisTitleEN}{HearBridge: Design and Implementation of a Multi-end Collaborative System for Hearing-impaired Communication and Training}
+\newcommand{\AuthorName}{待填写}
+\newcommand{\StudentID}{待填写}
+\newcommand{\MajorName}{待填写}
+\newcommand{\CollegeName}{计算机学院}
+\newcommand{\SupervisorName}{待填写}
+\newcommand{\SubmitDate}{二〇二六年五月}
 
 \begin{document}
 
-\maketitle
+% ==============================
+% 前置部分：封面、声明、摘要、目录
+% ==============================
+
+\input{frontmatter/cover}
+\clearpage
+
+\input{frontmatter/declaration}
+\clearpage
+
+\pagenumbering{Roman}
+\setcounter{page}{1}
+
+\input{frontmatter/abstract-cn}
+\clearpage
+
+\input{frontmatter/abstract-en}
+\clearpage
 
 \tableofcontents
+\clearpage
 
-\section{引言}
+% ==============================
+% 主体部分：正文
+% ==============================
 
-这是论文项目的初始版本。
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\input{chapters/chapter01-introduction}
+\input{chapters/chapter02-related-work}
+\input{chapters/chapter03-requirement-analysis}
+\input{chapters/chapter04-system-design}
+\input{chapters/chapter05-system-implementation}
+\input{chapters/chapter06-system-test}
+\input{chapters/chapter07-conclusion}
+
+% ==============================
+% 结尾部分：参考文献、致谢、附录
+% ==============================
+
+\clearpage
+\chapter*{参考文献}
+\addcontentsline{toc}{chapter}{参考文献}
+\printbibliography[heading=none]
+
+\clearpage
+\input{backmatter/acknowledgements}
+
+\clearpage
+\input{backmatter/appendix}
 
 \end{document}
