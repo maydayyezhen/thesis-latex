@@ -15,3 +15,46 @@
 \section{论文组织结构}
 
 这里填写各章节安排。
+
+\section{格式链路测试}
+
+本节用于临时测试论文模板中的参考文献、图、表、公式和交叉引用效果。听桥系统涉及移动端交互、后端服务、手势识别服务和管理端资源维护等多个部分，其中手势识别链路可参考 MediaPipe 相关技术资料\cite{mediapipe-test}。
+
+如图~\ref{fig:format-test-architecture} 所示，听桥系统由多个端侧与服务侧模块协同组成。
+
+\begin{figure}[H]
+  \centering
+  \fbox{
+    \begin{minipage}[c][4cm][c]{0.8\textwidth}
+      \centering
+      听桥系统架构示意图占位
+    \end{minipage}
+  }
+  \caption{听桥系统架构测试图}
+  \label{fig:format-test-architecture}
+\end{figure}
+
+系统核心模块职责如表~\ref{tab:format-test-modules} 所示。
+
+\begin{table}[H]
+  \centering
+  \caption{听桥系统模块职责测试表}
+  \label{tab:format-test-modules}
+  \begin{tabular}{lll}
+    \toprule
+    模块 & 主要职责 & 技术基础 \\
+    \midrule
+    移动端 & 用户交互、相机采集、识别展示 & HarmonyOS \\
+    后端服务 & 数据管理、接口服务、权限控制 & Spring Boot \\
+    识别服务 & 关键点处理、特征提取、模型预测 & Python \\
+    管理端 & 资源管理、样本管理、模型发布 & Vue 3 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+公式~\eqref{eq:format-test-score} 用于测试公式编号与引用效果，其中 $S$ 表示综合评分，$A$ 表示识别准确率，$Q$ 表示样本质量。
+
+\begin{equation}
+  S = 0.7A + 0.3Q
+  \label{eq:format-test-score}
+\end{equation}
