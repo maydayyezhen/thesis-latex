@@ -1,7 +1,13 @@
 ﻿\documentclass[UTF8,fontset=windows,zihao=-4,oneside,openany]{ctexbook}
 
+% =========================================================
+% 武汉大学本科毕业论文 LaTeX 主入口
+% 项目：听桥 / HearBridge
+% 编译方式：XeLaTeX + biber
+% =========================================================
+
 % ==============================
-% 基础页面设置
+% 页面设置
 % ==============================
 
 \usepackage[
@@ -9,32 +15,76 @@
   left=25mm,
   right=20mm,
   top=25mm,
-  bottom=20mm
+  bottom=20mm,
+  headsep=8mm,
+  footskip=10mm
 ]{geometry}
 
 \usepackage{setspace}
 \onehalfspacing
 
+% ==============================
+% 字体设置
+% ==============================
+
 \usepackage{fontspec}
 \setmainfont{Times New Roman}
+
+% ctex 在 fontset=windows 下会自动配置宋体、黑体、楷体等中文字体。
+% 正文默认字号由 documentclass 的 zihao=-4 控制，即小四号。
+
+% ==============================
+% 常用宏包
+% ==============================
 
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
 \usepackage{amsmath}
+\usepackage{amssymb}
+
+% 图、表、公式按章编号
+\numberwithin{figure}{chapter}
+\numberwithin{table}{chapter}
 \numberwithin{equation}{chapter}
 
+% ==============================
+% 图表标题设置
+% ==============================
+
 \usepackage{caption}
-\DeclareCaptionFont{wuhao}{\zihao{5}}
-\DeclareCaptionLabelSeparator{whuspace}{\quad}
+
+\DeclareCaptionFont{whuCaptionFont}{\songti\zihao{5}}
+\DeclareCaptionLabelSeparator{whuSpace}{\quad}
+
 \captionsetup{
-  font=wuhao,
+  font=whuCaptionFont,
   labelfont=bf,
   textfont=bf,
-  labelsep=whuspace
+  labelsep=whuSpace
 }
 
+\captionsetup[figure]{
+  position=bottom,
+  skip=6pt
+}
+
+\captionsetup[table]{
+  position=top,
+  skip=6pt
+}
+
+\renewcommand{\figurename}{图}
+\renewcommand{\tablename}{表}
+
+% ==============================
+% 页眉页脚设置
+% ==============================
+
 \usepackage{fancyhdr}
+
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[C]{\songti\zihao{5} 武汉大学本科毕业论文（设计）}
@@ -48,17 +98,21 @@
   \renewcommand{\headrulewidth}{0.4pt}
 }
 
-\usepackage[
-  backend=biber,
-  style=gb7714-2015,
-  gbnamefmt=lowercase
-]{biblatex}
-\addbibresource{refs/references.bib}
-
-\usepackage[hidelinks]{hyperref}
+\fancypagestyle{whuempty}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0pt}
+}
 
 % ==============================
-% 标题层级设置
+% 目录设置
+% ==============================
+
+\renewcommand{\contentsname}{目\quad 录}
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+
+% ==============================
+% 章节标题设置
 % ==============================
 
 \ctexset{
@@ -88,28 +142,43 @@
   }
 }
 
-\setcounter{tocdepth}{2}
-\setcounter{secnumdepth}{3}
+% ==============================
+% 参考文献设置
+% ==============================
+
+\usepackage[
+  backend=biber,
+  style=gb7714-2015,
+  gbnamefmt=lowercase
+]{biblatex}
+
+\addbibresource{refs/references.bib}
+
+% ==============================
+% 超链接设置
+% ==============================
+
+\usepackage[hidelinks]{hyperref}
 
 % ==============================
 % 论文基础信息
-% 后续只需要改这里
+% 后续主要改这里
 % ==============================
 
 \newcommand{\ThesisTitleCN}{听桥：面向听障交流与训练的多端协同系统设计与实现}
 \newcommand{\ThesisTitleEN}{HearBridge: Design and Implementation of a Multi-end Collaborative System for Hearing-impaired Communication and Training}
 \newcommand{\AuthorName}{待填写}
 \newcommand{\StudentID}{待填写}
-\newcommand{\MajorName}{待填写}
+\newcommand{\MajorName}{软件工程}
 \newcommand{\CollegeName}{计算机学院}
 \newcommand{\SupervisorName}{待填写}
 \newcommand{\SubmitDate}{二〇二六年五月}
 
 \begin{document}
 
-% ==============================
+% =========================================================
 % 前置部分：封面、声明、摘要、目录
-% ==============================
+% =========================================================
 
 \input{frontmatter/cover}
 \clearpage
@@ -117,6 +186,7 @@
 \input{frontmatter/declaration}
 \clearpage
 
+% 从中文摘要开始使用罗马数字页码
 \pagenumbering{Roman}
 \setcounter{page}{1}
 
@@ -129,9 +199,9 @@
 \tableofcontents
 \clearpage
 
-% ==============================
+% =========================================================
 % 主体部分：正文
-% ==============================
+% =========================================================
 
 \pagenumbering{arabic}
 \setcounter{page}{1}
@@ -144,9 +214,9 @@
 \input{chapters/chapter06-system-test}
 \input{chapters/chapter07-conclusion}
 
-% ==============================
+% =========================================================
 % 结尾部分：参考文献、致谢、附录
-% ==============================
+% =========================================================
 
 \clearpage
 \chapter*{参考文献}
