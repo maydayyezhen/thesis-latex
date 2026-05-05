@@ -3,13 +3,13 @@
 
   "latex-workshop.latex.tools": [
     {
-      "name": "latexmk-xelatex",
+      "name": "latexmk-pdfxe",
       "command": "latexmk",
       "args": [
+        "-pdfxe",
         "-synctex=1",
         "-interaction=nonstopmode",
         "-file-line-error",
-        "-xelatex",
         "-outdir=%OUTDIR%",
         "%DOC%"
       ]
@@ -18,22 +18,19 @@
 
   "latex-workshop.latex.recipes": [
     {
-      "name": "latexmk (xelatex)",
+      "name": "latexmk (pdfxe)",
       "tools": [
-        "latexmk-xelatex"
+        "latexmk-pdfxe"
       ]
     }
   ],
 
   "latex-workshop.latex.recipe.default": "first",
 
-  "latex-workshop.latex.autoBuild.run": "onFileChange",
-  "latex-workshop.latex.autoBuild.interval": 1000,
+  "latex-workshop.latex.autoBuild.run": "onSave",
 
   "latex-workshop.view.pdf.viewer": "tab",
   "latex-workshop.view.pdf.internal.synctex.keybinding": "double-click",
-
-  "latex-workshop.latex.watch.usePolling": true,
 
   "latex-workshop.message.error.show": true,
   "latex-workshop.message.warning.show": false,
