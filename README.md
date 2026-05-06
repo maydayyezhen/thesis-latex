@@ -129,13 +129,13 @@ diagrams/chapter03/
 - fig3-4-training-flow.tex
 - fig3-5-sentence-video-flow.tex
 
-第五章模型发布流程图源码位于：
+第五章模型发布流程图文件位于：
 
 diagrams/chapter05/
 
 包括：
 
-- fig5-4-model-release-flow.tex
+- fig5-4-model-release-flow.pdf
 
 ## 统一图片命令
 
