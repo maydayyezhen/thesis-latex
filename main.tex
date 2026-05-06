@@ -83,8 +83,16 @@
 \usepackage{float}
 \usepackage{booktabs}
 \usepackage{array}
-\\usepackage{longtable}
-\\usepackage{listings}
+\usepackage{longtable}
+\usepackage{listings}
+
+% ==============================
+% 统一表格列类型
+% ==============================
+
+% 左对齐固定宽度列，避免窄列中文或接口路径强行两端对齐导致溢出。
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
 
 % ==============================
 % 统一字段表命令
@@ -99,7 +107,9 @@
 % #5 表标签
 % #6 表格内容
 \NewDocumentCommand{\WhuFieldTable}{O{0.25\textwidth} O{0.22\textwidth} O{0.43\textwidth} m m +m}{%
-  \begin{longtable}{p{#1} p{#2} p{#3}}
+  \begingroup
+  \zihao{5}
+  \begin{longtable}{L{#1} L{#2} L{#3}}
     \caption{#4}\label{#5}\\
     \toprule
     字段名 & 类型 & 说明 \\
@@ -107,6 +117,7 @@
     #6
     \bottomrule
   \end{longtable}
+  \endgroup
 }
 
 % ==============================
@@ -115,15 +126,17 @@
 
 % 用于接口清单类四列表格。
 % 参数：
-% #1 第一列宽度，默认 0.18\textwidth
-% #2 第二列宽度，默认 0.14\textwidth
-% #3 第三列宽度，默认 0.26\textwidth
-% #4 第四列宽度，默认 0.32\textwidth
+% #1 第一列宽度，默认 0.14\textwidth
+% #2 第二列宽度，默认 0.13\textwidth
+% #3 第三列宽度，默认 0.33\textwidth
+% #4 第四列宽度，默认 0.30\textwidth
 % #5 表题
 % #6 表标签
 % #7 表格内容
-\NewDocumentCommand{\WhuInterfaceTable}{O{0.18\textwidth} O{0.14\textwidth} O{0.26\textwidth} O{0.32\textwidth} m m +m}{%
-  \begin{longtable}{p{#1} p{#2} p{#3} p{#4}}
+\NewDocumentCommand{\WhuInterfaceTable}{O{0.14\textwidth} O{0.13\textwidth} O{0.33\textwidth} O{0.30\textwidth} m m +m}{%
+  \begingroup
+  \zihao{5}
+  \begin{longtable}{L{#1} L{#2} L{#3} L{#4}}
     \caption{#5}\label{#6}\\
     \toprule
     模块 & 方法 & 接口路径 & 说明 \\
@@ -131,6 +144,7 @@
     #7
     \bottomrule
   \end{longtable}
+  \endgroup
 }
 
 
@@ -149,6 +163,7 @@
 % ==============================
 
 \usepackage{caption}
+\usepackage{subcaption}
 
 \DeclareCaptionFont{whuCaptionFont}{\songti\zihao{5}}
 \DeclareCaptionLabelSeparator{whuSpace}{\quad}
@@ -196,6 +211,7 @@
 % ==============================
 
 \usepackage{fancyhdr}
+\setlength{\headheight}{13pt}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -342,6 +358,14 @@
 \input{backmatter/appendix}
 
 \end{document}
+
+
+
+
+
+
+
+
 
 
 
