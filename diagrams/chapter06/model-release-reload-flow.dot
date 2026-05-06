@@ -1,0 +1,43 @@
+digraph G {
+  graph [
+    rankdir=TB,
+    splines=ortho,
+    nodesep=0.28,
+    ranksep=0.38,
+    pad=0.12,
+    dpi=220
+  ];
+
+  node [
+    shape=box,
+    style="rounded",
+    color="black",
+    penwidth=1.2,
+    fontname="Microsoft YaHei",
+    fontsize=13,
+    margin="0.16,0.09"
+  ];
+
+  edge [
+    color="black",
+    arrowsize=0.7,
+    penwidth=1.1,
+    fontname="Microsoft YaHei",
+    fontsize=11
+  ];
+
+  admin   [label="管理员发布模型版本"];
+  backend [label="后端校验模型文件\n与标签映射文件"];
+  reload  [label="Python 服务重载模型"];
+  current [label="更新当前运行模型"];
+  mobile  [label="移动端发起实时识别"];
+  infer   [label="Python 使用当前模型推理"];
+  result  [label="返回识别结果\n标签、置信度、模型版本"];
+
+  admin -> backend;
+  backend -> reload;
+  reload -> current;
+  current -> mobile [label="新识别会话使用"];
+  mobile -> infer;
+  infer -> result;
+}
