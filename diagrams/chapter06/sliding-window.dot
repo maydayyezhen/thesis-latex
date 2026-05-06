@@ -1,0 +1,84 @@
+digraph G {
+  graph [
+    rankdir=TB,
+    splines=ortho,
+    nodesep=0.40,
+    ranksep=0.48,
+    pad=0.18,
+    dpi=220,
+    bgcolor="white",
+    newrank="true"
+  ];
+
+  node [
+    shape=box,
+    style="rounded",
+    color="black",
+    penwidth=1.2,
+    fontname="Microsoft YaHei",
+    fontsize=13,
+    margin="0.18,0.10"
+  ];
+
+  edge [
+    color="black",
+    arrowsize=0.75,
+    penwidth=1.1,
+    fontname="Microsoft YaHei",
+    fontsize=11
+  ];
+
+  seq [
+    label="帧级检测结果序列\n0, 1, 2, ..., total_frames-1"
+  ];
+
+  note [
+    label="窗口长度 = 20\n步长 = 2"
+  ];
+
+  w1 [
+    label="窗口 1\nstart = 0\nend = 19"
+  ];
+
+  w2 [
+    label="窗口 2\nstart = 2\nend = 21"
+  ];
+
+  w3 [
+    label="窗口 3\nstart = 4\nend = 23"
+  ];
+
+  wdots [
+    label="..."
+  ];
+
+  wlast [
+    label="最后窗口\nstart = last_start\nend = last_start + 19"
+  ];
+
+  feature [
+    label="逐窗口构造特征\n每个窗口 → 20×232"
+  ];
+
+  batch [
+    label="批量推理输入\nX ∈ R^{window_count×20×232}"
+  ];
+
+  seq -> note;
+
+  note -> w1;
+  note -> w2;
+  note -> w3;
+  note -> wdots;
+  note -> wlast;
+
+  { rank=same; w1; w2; w3; wdots; wlast; }
+
+  w1 -> feature;
+  w2 -> feature;
+  w3 -> feature;
+  wdots -> feature;
+  wlast -> feature;
+
+  feature -> batch;
+}
