@@ -256,13 +256,13 @@ figures/chapter06/
 示例：
 
 ```tex
-\WhuDiagramFigure{diagrams/chapter03/fig3-5-sentence-video-flow.tex}{句子视频识别流程图}{fig:sentence-video-flow}
+\WhuDiagramFigure{diagrams/chapter03/sentence-video-flow.tex}{句子视频识别流程图}{fig:sentence-video-flow}
 ```
 
 指定最大宽度和最大高度：
 
 ```tex
-\WhuDiagramFigure[0.68\textwidth][0.55\textheight]{diagrams/chapter03/fig3-5-sentence-video-flow.tex}{句子视频识别流程图}{fig:sentence-video-flow}
+\WhuDiagramFigure[0.68\textwidth][0.55\textheight]{diagrams/chapter03/sentence-video-flow.tex}{句子视频识别流程图}{fig:sentence-video-flow}
 ```
 
 ### 插入 PNG / JPG / PDF 图片
@@ -276,13 +276,13 @@ figures/chapter06/
 示例：
 
 ```tex
-\WhuImageFigure{figures/chapter04/fig4-1-system-architecture.png}{系统总体架构图}{fig:chapter04-system-architecture}
+\WhuImageFigure{figures/chapter04/system-architecture.png}{系统总体架构图}{fig:chapter04-system-architecture}
 ```
 
 指定最大宽度和最大高度：
 
 ```tex
-\WhuImageFigure[0.9\textwidth][0.6\textheight]{figures/chapter04/fig4-1-system-architecture.png}{系统总体架构图}{fig:chapter04-system-architecture}
+\WhuImageFigure[0.9\textwidth][0.6\textheight]{figures/chapter04/system-architecture.png}{系统总体架构图}{fig:chapter04-system-architecture}
 ```
 
 ### 插入智能占位图
@@ -296,7 +296,7 @@ figures/chapter06/
 示例：
 
 ```tex
-\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-1-raw-dataset-flow.png}{自采样本采集流程图}{fig:chapter06-raw-dataset-flow}
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/raw-dataset-flow.png}{自采样本采集流程图}{fig:chapter06-raw-dataset-flow}
 ```
 
 如果图片存在，会自动插入真实图片；如果图片不存在，会显示占位框。

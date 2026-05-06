@@ -10,7 +10,7 @@
 若用户已登录，则可直接进入应用主界面。
 进入主界面后，用户可以根据需要选择首页、训练或我的等功能模块，并在对应模块中完成相关操作。
 
-\WhuImageFigure[0.78\textwidth][0.52\textheight]{figures/chapter03/fig3-3-user-flow.pdf}{普通用户总体流程图}{fig:user-flow}
+\WhuImageFigure[0.78\textwidth][0.52\textheight]{figures/chapter03/user-flow.pdf}{普通用户总体流程图}{fig:user-flow}
 
 如图~\ref{fig:user-flow} 所示，普通用户进入系统后可选择不同功能模块。
 首页主要用于使用快捷入口和查看首页内容，训练模块用于完成手势训练，个人中心用于完成资料修改、密码修改或退出登录等账号操作。
@@ -23,7 +23,7 @@
 随后开始练习，并按照页面提示对准摄像头完成手势动作；
 系统将识别结果以实时反馈形式展示给用户，用户可根据结果决定是否继续练习。
 
-\WhuImageFigure[0.68\textwidth][0.55\textheight]{figures/chapter03/fig3-4-training-flow.pdf}{实时手势训练流程图}{fig:training-flow}
+\WhuImageFigure[0.68\textwidth][0.55\textheight]{figures/chapter03/training-flow.pdf}{实时手势训练流程图}{fig:training-flow}
 
 如图~\ref{fig:training-flow} 所示，实时手势训练流程以用户操作为中心，重点描述用户如何进入训练页面、观看示范、完成手势动作并查看实时识别结果。
 对于图像帧传输、关键点提取和模型推理等内部处理过程，将在后续系统设计与实现章节中说明。
@@ -36,7 +36,7 @@
 若用户需要继续识别其他视频，可以重新选择本地视频；
 若不再继续识别，则可结束操作或返回首页。
 
-\WhuImageFigure[0.68\textwidth][0.55\textheight]{figures/chapter03/fig3-5-sentence-video-flow.pdf}{句子视频识别流程图}{fig:sentence-video-flow}
+\WhuImageFigure[0.68\textwidth][0.55\textheight]{figures/chapter03/sentence-video-flow.pdf}{句子视频识别流程图}{fig:sentence-video-flow}
 
 如图~\ref{fig:sentence-video-flow} 所示，句子视频识别流程主要体现用户侧可感知的操作步骤，包括进入识别页面、选择视频、提交识别、等待识别完成、查看原始识别结果和查看语义修正结果。
 该流程不直接展开 Python 识别服务和 DeepSeek 语义修正的内部实现细节。
