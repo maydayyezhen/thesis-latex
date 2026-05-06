@@ -83,7 +83,8 @@
 \usepackage{float}
 \usepackage{booktabs}
 \usepackage{array}
-\usepackage{longtable}
+\\usepackage{longtable}
+\\usepackage{listings}
 
 % ==============================
 % 统一字段表命令
@@ -107,6 +108,31 @@
     \bottomrule
   \end{longtable}
 }
+
+% ==============================
+% 统一接口表命令
+% ==============================
+
+% 用于接口清单类四列表格。
+% 参数：
+% #1 第一列宽度，默认 0.18\textwidth
+% #2 第二列宽度，默认 0.14\textwidth
+% #3 第三列宽度，默认 0.26\textwidth
+% #4 第四列宽度，默认 0.32\textwidth
+% #5 表题
+% #6 表标签
+% #7 表格内容
+\NewDocumentCommand{\WhuInterfaceTable}{O{0.18\textwidth} O{0.14\textwidth} O{0.26\textwidth} O{0.32\textwidth} m m +m}{%
+  \begin{longtable}{p{#1} p{#2} p{#3} p{#4}}
+    \caption{#5}\label{#6}\\
+    \toprule
+    模块 & 方法 & 接口路径 & 说明 \\
+    \midrule
+    #7
+    \bottomrule
+  \end{longtable}
+}
+
 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -146,6 +172,24 @@
 
 \renewcommand{\figurename}{图}
 \renewcommand{\tablename}{表}
+
+% ==============================
+% 代码片段样式
+% ==============================
+
+\renewcommand{\lstlistingname}{代码片段}
+
+\lstdefinestyle{whuCode}{
+  basicstyle=\ttfamily\zihao{5},
+  numbers=none,
+  frame=single,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  captionpos=b
+}
+
 
 % ==============================
 % 页眉页脚设置
@@ -298,6 +342,8 @@
 \input{backmatter/appendix}
 
 \end{document}
+
+
 
 
 
