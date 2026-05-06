@@ -1,4 +1,4 @@
-﻿\documentclass[UTF8,fontset=windows,zihao=-4,oneside,openany]{ctexbook}
+\documentclass[UTF8,fontset=windows,zihao=-4,oneside,openany]{ctexbook}
 
 % =========================================================
 % 武汉大学本科毕业论文 LaTeX 主入口
@@ -91,8 +91,6 @@
 % ==============================
 
 % 左对齐固定宽度列，避免窄列中文或接口路径强行两端对齐导致溢出。
-\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
-
 
 % ==============================
 % 统一字段表命令
@@ -302,6 +300,53 @@
 \newcommand{\CollegeName}{计算机学院}
 \newcommand{\SupervisorName}{待填写}
 \newcommand{\SubmitDate}{二〇二六年五月}
+
+
+
+% ===== 全局表格宽度修正开始 =====
+% 缩小表格列间距，减少横向溢出
+\setlength{\tabcolsep}{3pt}
+
+% 给段落和表格提供额外伸缩空间，减少 overfull
+\setlength{\emergencystretch}{3em}
+
+% 重新定义 L/C/R 列类型：
+% \dimexpr#1-2\tabcolsep\relax 用于扣除列左右间距；
+% \hspace{0pt} 允许英文长串在窄列中自动断行。
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
+% ===== 全局表格宽度修正结束 =====
+
+
+% ===== 智能占位图开始 =====
+% 用法：
+% \WhuAutoFigure{宽度}{高度}{图片路径}{图题}{label}
+% 如果图片存在：自动插入图片；
+% 如果图片不存在：显示占位框。
+\newcommand{\WhuAutoFigure}[5]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{#3}{%
+      \includegraphics[width=#1,height=#2,keepaspectratio]{#3}%
+    }{%
+      \fbox{%
+        \parbox[c][#2][c]{#1}{%
+          \centering
+          \vspace{6pt}
+          {\bfseries 占位图}\\[6pt]
+          #4\\[8pt]
+          \texttt{\detokenize{#3}}\\[6pt]
+          将真实图片放到该路径并重新编译即可
+          \vspace{6pt}
+        }%
+      }%
+    }%
+    \caption{#4}
+    \label{#5}
+  \end{figure}
+}
+% ===== 智能占位图结束 =====
 
 \begin{document}
 

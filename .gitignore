@@ -12,3 +12,95 @@
 *.toc
 *.xdv
 *.gz
+
+# Local backup files
+.local-backups/
+*.bak
+*.bak*
+*.backup.tex
+*SAVE-ERROR*
+
+# LaTeX temporary files
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.xdv
+*.lof
+*.lot
+*.idx
+*.ilg
+*.ind
+*.nav
+*.snm
+*.vrb
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+
+# Build directory
+build/
+
+# Local backup files
+.local-backups/
+*.bak
+*.bak*
+*.backup.tex
+*SAVE-ERROR*
+
+# Python local environment
+.venv/
+__pycache__/
+*.pyc
+
+# Local generated tree files
+project-tree.txt
+project-tree-clean.txt
+git-files.txt
+
+# LaTeX temporary files
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.xdv
+*.lof
+*.lot
+*.idx
+*.ilg
+*.ind
+*.nav
+*.snm
+*.vrb
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+
+# Build directory
+build/
+
+# Generated PDF
+main.pdf
+

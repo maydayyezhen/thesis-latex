@@ -1,23 +1,732 @@
-﻿% !TEX root = ../main.tex
-\chapter{系统测试与结果分析}
+% !TEX root = ../main.tex
+\chapter{手势识别服务实现与实验分析}
 
-\section{测试环境}
 
-这里填写硬件环境、软件环境、移动端环境、后端环境和识别服务环境。
+\setlength{\tabcolsep}{3pt}
+HearBridge 系统中的手势识别功能主要分为两类任务：一类是面向移动端训练场景的实时单词识别，另一类是面向短视频辅助交流场景的句子视频识别。实时单词识别用于支持用户在训练页面中观看动作示范后进行模仿练习，系统根据用户当前动作返回识别结果和置信度信息；句子视频识别则用于支持用户选择一段手语短视频，系统从视频中识别多个词级结果，并进一步展示中文映射和语义修正结果。本章先围绕实时单词识别说明系统闭环实现，再单独展开句子视频识别的资源选择、方法实现与实验分析。
 
-\section{功能测试}
+\section{实时单词识别模型与系统闭环实现}
 
-这里填写移动端、后端接口、Web 管理端和识别服务的功能测试。
+实时单词识别是 HearBridge 系统中直接服务于移动端训练页面的识别功能。该功能的输入来自用户在手机端实时完成的单个手势动作，输出为当前动作类别、置信度以及模型版本等信息。与句子视频识别不同，实时单词识别不处理一段视频中的多个连续动作，也不涉及中文映射和语义修正，其主要目标是为用户模仿练习提供即时识别反馈。
 
-\section{关键流程测试}
+\subsection{数据资源与技术选择}
 
-这里填写实时识别、样本采集、特征转换、模型训练和模型发布流程测试。
+实时单词识别模型主要使用系统自采样本进行训练。管理员在系统维护过程中可通过样本采集功能为指定手势动作采集训练样本，Python 手势识别服务接收采集帧并保存为 raw dataset。选择自采数据作为实时单词识别的数据来源，是因为该任务需要直接服务于 HearBridge 当前维护的手语资源和训练动作，自采样本更贴近系统实际训练项、采集方式和运行环境。
 
-\section{测试结果分析}
+在技术选择上，实时单词识别采用基于关键点特征的固定词表分类方案。识别服务使用 MediaPipe 对手部和人体姿态关键点进行提取，将原始图像帧转换为结构化时序数据，再通过特征转换流程生成模型训练所需的数据。模型训练部分采用 TensorFlow/Keras 实现固定词表分类模型，具体使用 1D CNN 对固定长度的时序特征进行分类。
 
-这里填写测试结果、问题分析和系统可用性评价。
+\subsection{自采样本采集链路}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-1-raw-dataset-flow.png}{自采样本采集流程图}{fig:chapter06-raw-dataset-flow}
+
+
+自采样本采集链路是实时单词识别闭环的起点。管理员或维护人员在采集前先确定当前样本所属的手势标签，移动端随后与 Python 手势识别服务建立数据采集 WebSocket 连接，并发送采集开始消息。服务端接收到 start\_dataset 消息后读取其中的 label 字段，如果标签为空则返回错误提示；若标签有效，则清空当前连接中的采集缓存，将采集状态设置为 ready，并向前端返回当前标签、已采集有效帧数和目标窗口帧数等状态信息。
+
+采集过程采用连接级缓存设计。Python 服务在每个 WebSocket 连接中维护 raw\_frames、pending\_raw\_frames、pending\_label 和 waiting\_save\_confirm 等状态变量。其中，raw\_frames 用于保存当前正在采集的有效帧；pending\_raw\_frames 用于保存已经采满但尚未确认保存的样本；pending\_label 用于记录待保存样本的标签；waiting\_save\_confirm 用于避免样本采满后继续接收新帧导致数据混入。
+
+移动端持续向 WebSocket 发送图像二进制数据。服务端在接收到二进制帧后，首先判断采集是否已经启动，若尚未发送 start\_dataset 则返回错误提示；若当前已有等待确认保存的样本，则暂不继续处理新帧。随后，服务端根据采样时间间隔过滤过密帧，避免短时间内接收过多重复图像。
+
+每一帧图像在服务端会先转换为 OpenCV 可处理的图像格式，再由 BGR 转为 RGB 后分别送入 MediaPipe Hands 和 MediaPipe Pose。服务端随后提取手部关键点、手部世界坐标、手部存在状态、姿态关键点、姿态存在状态、时间戳和画面宽高等信息，整理为 raw frame。若当前帧未检测到有效手部或必要姿态信息，服务端不会将该帧加入样本，而是向前端返回 invalid\_frame 状态。
+
+当有效帧数量达到配置的 raw 样本窗口长度后，服务端不会立即写入磁盘，而是将当前帧序列复制到 pending\_raw\_frames，记录待保存标签，并返回 ready\_to\_save 状态。前端若发送 save\_dataset 消息，服务端会检查当前是否存在等待保存的完整样本，并调用 raw dataset 保存工具写入样本文件；若前端发送 discard\_dataset，则丢弃待保存样本。
+
+该采集链路的一个重要特点是先保存 raw dataset，而不是直接保存最终训练特征。raw dataset 中保留了后续特征转换所需的基础信息，因此当特征构造策略发生调整时，可以基于已有 raw 样本重新生成训练特征，而不必重新采集全部动作样本。
+
+\subsection{特征数据构成}
+
+实时单词识别模型以 MediaPipe 检测得到的结构化关键点作为训练输入。系统在服务端调用 MediaPipe Hands 获取左右手关键点，调用 MediaPipe Pose 获取上肢姿态关键点，并将连续帧关键点转换为固定长度的时序特征。关键点特征能够弱化背景、光照和人物外观差异对识别结果的影响，同时降低输入维度，适合移动端训练反馈场景下的实时识别任务。
+
+本文使用左右手 21 点手部关键点，以及身体上肢的肩、肘、腕关键点作为特征来源。手部关键点用于描述手型结构、手指弯曲状态和手部局部姿态；上肢姿态关键点用于描述手腕、手肘相对于肩部中心的位置关系。实时单词识别所使用的关键点选取如图~\ref{fig:chapter06-realtime-feature-166} 所示。
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-2-realtime-feature-166.png}{实时单词识别特征来源关键点示意图}{fig:chapter06-realtime-feature-166}
+
+手部坐标特征来源于 MediaPipe Hands 输出的 hand world landmarks。该结果为每只手提供 21 个三维关键点，坐标以米为单位，原点位于手部几何中心附近。系统对 hand world landmarks 进行尺度归一化，使不同手部大小和不同拍摄距离下的坐标数值具有更接近的尺度范围。
+
+姿态辅助特征来源于 MediaPipe Pose 输出的 pose landmarks。系统从中选取左右肩、左右肘和左右腕的二维归一化图像坐标，其中 $x$ 和 $y$ 坐标分别按图像宽度和高度归一化到 0 到 1 范围内。通过上肢关键点，模型能够获得手部动作相对于身体中心的大致位置关系。
+
+在特征组织方式上，系统将一个实时单词识别样本表示为固定长度的时序窗口。当前模型以连续 30 帧有效图像作为一个输入样本，每帧对应 166 维特征，因此单个样本的输入形状如公式~\ref{eq:chapter06-realtime-sample-shape} 所示。
+
+\begin{equation}
+X \in \mathbb{R}^{30\times166}
+\label{eq:chapter06-realtime-sample-shape}
+\end{equation}
+
+其中，$X$ 表示单个实时单词识别样本，30 表示一个样本包含 30 帧连续有效图像，166 表示每一帧的特征维度。对于第 $t$ 帧图像，其单帧特征 $f_t$ 由左手特征、右手特征和姿态辅助特征三部分拼接得到，如公式~\ref{eq:chapter06-realtime-frame-feature} 所示。
+
+\begin{equation}
+f_t = [H^L_{78},\ H^R_{78},\ P_{10}]
+\label{eq:chapter06-realtime-frame-feature}
+\end{equation}
+
+表~\ref{tab:chapter06-realtime-feature-composition} 给出了单帧 166 维特征的组成方式。左右手特征采用相同的维度结构，均由尺度归一化后的手部坐标特征以及手指骨骼角度特征组成；姿态辅助特征由上肢关键点相对肩中心的位置特征和肘部角度特征组成。
+
+\begin{longtable}{L{0.15\textwidth} L{0.08\textwidth} L{0.25\textwidth} L{0.27\textwidth} L{0.15\textwidth}}
+  \caption{单帧 166 维特征构成表}
+  \label{tab:chapter06-realtime-feature-composition}\\
+  \toprule
+  特征部分 & 维度 & 数据来源 & 计算方式 & 作用 \\
+  \midrule
+  左手坐标特征 & 63 & MediaPipe Hands 的左手 hand world landmarks & 以手腕到中指掌指关节点的距离作为尺度因子，对 21 个三维关键点归一化后展开 & 描述左手空间形态 \\
+  左手角度特征 & 15 & 左手 hand world landmarks 的骨骼连接关系 & 基于相邻骨骼向量计算夹角余弦 & 描述左手手指弯曲状态 \\
+  右手坐标特征 & 63 & MediaPipe Hands 的右手 hand world landmarks & 以手腕到中指掌指关节点的距离作为尺度因子，对 21 个三维关键点归一化后展开 & 描述右手空间形态 \\
+  右手角度特征 & 15 & 右手 hand world landmarks 的骨骼连接关系 & 基于相邻骨骼向量计算夹角余弦 & 描述右手手指弯曲状态 \\
+  姿态位置特征 & 8 & MediaPipe Pose 的左右肩、左右肘、左右腕二维坐标 & 以肩中心为参考点进行相对化，并按肩宽进行尺度归一化 & 描述手部相对身体的位置 \\
+  姿态角度特征 & 2 & MediaPipe Pose 的左右肩、肘、腕二维坐标 & 计算左右肘部夹角余弦 & 描述上肢弯曲状态 \\
+  合计 & 166 & -- & 左右手特征与姿态辅助特征拼接 & 单帧输入特征 \\
+  \bottomrule
+\end{longtable}
+
+对于单只手，设第 $i$ 个 hand world landmark 为 $h_i=(x_i,y_i,z_i)$，手腕关键点为 $h_0$，中指掌指关节点为 $h_9$。系统使用手腕点到中指掌指关节点之间的欧氏距离作为手部尺度因子，如公式~\ref{eq:chapter06-hand-scale-factor} 所示。
+
+\begin{equation}
+s_h = \lVert h_9 - h_0 \rVert_2
+\label{eq:chapter06-hand-scale-factor}
+\end{equation}
+
+其中，$s_h$ 表示手部尺度因子。若尺度因子过小，系统使用极小值 $\varepsilon$ 进行保护，避免除零问题。归一化后的手部关键点如公式~\ref{eq:chapter06-hand-landmark-normalization} 所示。
+
+\begin{equation}
+\hat{h}_i = \frac{h_i}{\max(s_h,\varepsilon)},\quad i=0,1,\ldots,20
+\label{eq:chapter06-hand-landmark-normalization}
+\end{equation}
+
+其中，$\hat{h}_i$ 表示尺度归一化后的手部关键点。归一化后的 21 个三维关键点按固定顺序展开，形成 63 维单手坐标特征。
+
+在坐标特征基础上，系统根据 MediaPipe Hands 的手部拓扑结构构造骨骼向量，并对每根手指上的相邻骨骼向量计算夹角余弦。对于三个连续关键点 $a$、$b$、$c$，以 $b$ 为夹角顶点。令 $v_1=p_a-p_b$，$v_2=p_c-p_b$，则相邻骨骼向量之间的夹角余弦如公式~\ref{eq:chapter06-finger-angle-cosine} 所示。
+
+\begin{equation}
+\cos\theta = \frac{v_1 \cdot v_2}{\lVert v_1\rVert \cdot \lVert v_2\rVert + \varepsilon}
+\label{eq:chapter06-finger-angle-cosine}
+\end{equation}
+
+每根手指沿骨骼链计算若干相邻骨骼夹角，五根手指共得到 15 维角度特征。单只手由 63 维坐标特征和 15 维角度特征共同组成 78 维手部特征。
+
+姿态辅助特征用于描述手部动作相对于上半身的位置关系。系统从 MediaPipe Pose 的 pose landmarks 中选取左右肩、左右肘和左右腕等上肢关键点，先根据左右肩关键点计算肩中心，再将左右手腕、左右手肘转换为相对于肩中心的二维坐标，并按肩宽进行尺度归一化。设左肩和右肩关键点分别为 $S_l$ 和 $S_r$，肩中心 $C_s$ 的计算方式如公式~\ref{eq:chapter06-shoulder-center} 所示。
+
+\begin{equation}
+C_s = \frac{S_l + S_r}{2}
+\label{eq:chapter06-shoulder-center}
+\end{equation}
+
+身体尺度因子 $s_p$ 使用左右肩之间的欧氏距离表示，如公式~\ref{eq:chapter06-body-scale-factor} 所示。
+
+\begin{equation}
+s_p = \lVert S_r - S_l \rVert_2
+\label{eq:chapter06-body-scale-factor}
+\end{equation}
+
+设上肢关键点集合为 $P_i\in\{W_l,W_r,E_l,E_r\}$，其中 $W_l$、$W_r$、$E_l$、$E_r$ 分别表示左腕、右腕、左肘和右肘关键点，则相对化和尺度归一化后的姿态位置特征如公式~\ref{eq:chapter06-pose-relative-normalization} 所示。
+
+\begin{equation}
+\hat{P}_i = \frac{P_i - C_s}{\max(s_p,\varepsilon)},\quad P_i\in\{W_l,W_r,E_l,E_r\}
+\label{eq:chapter06-pose-relative-normalization}
+\end{equation}
+
+本文取上述 4 个上肢关键点的二维相对坐标，因此姿态位置特征共 8 维。系统还计算左右肘部夹角，用于描述上肢弯曲状态。以左侧肘部为例，令 $u_l=S_l-E_l$，$v_l=W_l-E_l$，则左肘夹角余弦如公式~\ref{eq:chapter06-left-elbow-angle-cosine} 所示。
+
+\begin{equation}
+\cos\theta_l = \frac{u_l \cdot v_l}{\lVert u_l\rVert \cdot \lVert v_l\rVert + \varepsilon}
+\label{eq:chapter06-left-elbow-angle-cosine}
+\end{equation}
+
+右侧肘部夹角 $\cos\theta_r$ 的计算方式与左侧相同。姿态辅助特征由 8 维相对位置特征和 2 维肘部角度特征组成。最终，单帧 166 维特征可以表示为公式~\ref{eq:chapter06-complete-frame-feature-166}。
+
+\begin{equation}
+f_t = [L^{coord}_{63},\ L^{angle}_{15},\ R^{coord}_{63},\ R^{angle}_{15},\ P^{rel}_{8},\ P^{angle}_{2}]
+\label{eq:chapter06-complete-frame-feature-166}
+\end{equation}
+
+其中，$L^{coord}_{63}$ 和 $R^{coord}_{63}$ 分别表示左、右手尺度归一化后的 63 维坐标特征，$L^{angle}_{15}$ 和 $R^{angle}_{15}$ 分别表示左、右手的 15 维手指骨骼角度特征，$P^{rel}_{8}$ 表示 8 维上肢相对位置特征，$P^{angle}_{2}$ 表示 2 维肘部角度特征。
+
+综上，实时单词识别模型的输入特征由手部局部结构特征和身体上肢姿态辅助特征共同组成。左手和右手的 78 维特征主要反映经过尺度归一化后的手型结构及手指弯曲状态，10 维姿态辅助特征补充手腕、手肘与肩部中心之间的相对空间关系。通过将连续 30 帧单帧特征按时间顺序堆叠，系统最终得到形状为 $30\times166$ 的时序输入样本，为后续 1D CNN 模型进行固定词表手势分类提供数据基础。
+
+\subsection{特征转换与训练数据生成}
+
+在完成 raw dataset 采集后，系统需要将原始样本转换为模型可直接读取的训练数据。自采样本保存的是连续帧中的手部关键点、姿态关键点和检测状态等原始结构化数据，而模型训练需要的是形状固定、类别明确、数值类型统一的特征样本。因此，特征转换过程的作用就是将 raw dataset 中按类别保存的样本文件，批量转换为 $30\times166$ 的特征数组，并按照手势类别生成训练标签。
+
+特征转换脚本首先扫描 raw dataset 根目录。raw dataset 按手势类别分目录保存，因此脚本会依次遍历每个类别目录，并读取目录下的 sample\_XXX.npz 样本文件。每读取一个 raw 样本，系统都会检查其帧数是否符合窗口长度要求。当前实时单词识别模型要求每个样本包含 30 帧，如果某个样本帧数不符合要求，转换流程会跳过该样本并记录失败原因。
+
+单个 raw 样本转换时，系统会逐帧构造 166 维特征。每一帧先从左右手槽位中读取 hand world landmark 和手部存在状态：若某只手存在，则根据该手的 21 个三维关键点构造 78 维手型特征；若某只手不存在，则该手对应位置填充为 0。随后，系统根据姿态关键点构造 10 维姿态辅助特征。
+
+\begin{lstlisting}[style=whuCode,caption={实时单词识别特征转换流程},label={lst:chapter06-realtime-feature-convert}]
+raw_dataset/{label}/sample_XXX.npz
+-> 读取连续 30 帧 raw 数据
+-> 每帧构造 166 维特征
+-> 堆叠为 30×166 特征样本
+-> 保存为 processed feature .npy 文件
+\end{lstlisting}
+
+\subsection{固定词表模型训练}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-3-realtime-cnn.png}{实时单词识别 1D CNN 模型结构图}{fig:chapter06-realtime-cnn}
+
+
+在完成特征转换后，实时单词识别模型使用生成的 $30\times166$ 时序特征进行固定词表分类训练。训练脚本首先从特征目录中读取所有 .npy 特征样本，并根据目录名称生成对应的类别标签。读取完成后，系统得到模型训练所需的特征矩阵 X 和标签向量 y，其中 X 的形状为“样本数 $\times$ 30 $\times$ 166”。
+
+实时单词识别模型采用 1D CNN 结构。由于输入数据已经是按时间排列的关键点特征序列，模型不需要从二维图像中学习空间纹理，而是需要从连续帧特征中学习动作变化模式。因此，模型使用一维卷积沿时间维度提取局部时序特征。
+
+\begin{lstlisting}[style=whuCode,caption={实时单词识别模型结构},label={lst:chapter06-realtime-model-structure}]
+输入：30×166 时序特征
+-> Conv1D(96, kernel_size=3, ReLU)
+-> MaxPooling1D(pool_size=2)
+-> Conv1D(160, kernel_size=3, ReLU)
+-> GlobalAveragePooling1D
+-> Dense(96, ReLU)
+-> Dropout(0.3)
+-> Dense(num_classes, Softmax)
+\end{lstlisting}
+
+模型训练使用 Adam 优化器和稀疏多分类交叉熵损失函数，评价指标为分类准确率。训练过程中，系统将验证集损失作为早停依据，当验证集损失在若干轮内不再下降时提前停止训练，并恢复验证集表现较好的模型权重。
+
+\subsection{模型发布、重载与实时识别联动}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-4-model-release-reload-flow.png}{模型发布、重载与实时识别联动流程图}{fig:chapter06-model-release-reload-flow}
+
+
+固定词表模型训练完成后，训练产物还需要进入系统运行链路，才能真正被移动端实时识别功能使用。HearBridge 系统通过模型版本管理、模型发布和识别服务重载机制，将训练产物接入后台管理端和实时识别服务。
+
+模型发布过程中，管理员在后台管理端选择某个模型版本并点击发布。管理端向 Spring Boot 服务端发送发布请求，服务端根据模型版本 ID 查询对应记录，并检查模型文件和标签映射文件是否可用。随后，服务端调用 Python 手势识别服务提供的重载接口，使 Python 服务加载指定模型文件和标签映射。
+
+实时识别过程中，Python 服务根据当前加载的模型输出预测类别和置信度，并将结果通过 WebSocket 返回移动端。返回结果中除了识别标签和置信度外，还可以包含当前模型版本名称、是否使用发布模型等状态信息。
+
+\section{实时单词识别运行效果分析}
+
+\subsection{自采数据规模与词表说明}
+
+实时单词识别模型的训练数据来源于系统维护阶段采集的自采手势样本。该部分数据与 HearBridge 移动端训练资源直接对应，每一个手势类别都对应系统中的一个训练动作。
+
+\begin{longtable}{L{0.10\textwidth} L{0.18\textwidth} L{0.20\textwidth} L{0.16\textwidth} L{0.28\textwidth}}
+  \caption{自采手势类别与样本数量统计表}
+  \label{tab:chapter06-self-collected-samples}\\
+  \toprule
+  序号 & 手势标签 & 中文含义 & 样本数量 & 说明 \\
+  \midrule
+  1 & 待补充 & 待补充 & 待补充 & 对应系统中的一个训练动作 \\
+  2 & 待补充 & 待补充 & 待补充 & 对应系统中的一个训练动作 \\
+  合计 & 待补充 & 待补充 & 待补充 & 自采固定词表训练样本总数 \\
+  \bottomrule
+\end{longtable}
+
+\subsection{模型训练结果}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-5-realtime-training-curve.png}{实时单词识别训练过程损失与准确率变化曲线}{fig:chapter06-realtime-training-curve}
+
+
+\begin{longtable}{L{0.22\textwidth} L{0.20\textwidth} L{0.48\textwidth}}
+  \caption{实时单词识别模型评估结果}
+  \label{tab:chapter06-realtime-model-evaluation}\\
+  \toprule
+  指标 & 结果 & 说明 \\
+  \midrule
+  验证集损失 & 待补充 & 由模型评估结果文件获得 \\
+  验证集准确率 & 待补充 & 当前自采数据范围内的分类准确率 \\
+  训练样本数 & 待补充 & 参与训练的数据量 \\
+  验证样本数 & 待补充 & 参与验证的数据量 \\
+  支持类别数 & 待补充 & 当前固定词表中的手势类别数量 \\
+  \bottomrule
+\end{longtable}
+
+
+\WhuAutoFigure{0.78\textwidth}{0.48\textheight}{figures/chapter06/fig6-6-realtime-confusion-matrix.png}{实时单词识别模型混淆矩阵}{fig:chapter06-realtime-confusion-matrix}
+
+
+\subsection{移动端实时识别效果}
+
+
+\WhuAutoFigure{0.46\textwidth}{0.62\textheight}{figures/chapter06/fig6-7-mobile-realtime-result.png}{移动端实时识别效果图}{fig:chapter06-mobile-realtime-result}
+
+
+模型训练完成并发布后，需要进一步验证其在移动端实时训练场景中的运行效果。用户进入手势训练页面后，首先查看当前手语资源的动作示范，然后点击开始识别。移动端建立与 Python 手势识别服务之间的 WebSocket 连接，并持续发送摄像头采集到的图像帧。识别服务在接收到足够有效帧后构造特征窗口，调用当前发布模型进行推理，并将识别标签、置信度、有效帧数量和模型版本名称等信息返回移动端。
+
+\begin{longtable}{L{0.10\textwidth} L{0.18\textwidth} L{0.18\textwidth} L{0.16\textwidth} L{0.14\textwidth} L{0.24\textwidth}}
+  \caption{移动端实时识别结果示例}
+  \label{tab:chapter06-mobile-realtime-examples}\\
+  \toprule
+  序号 & 测试动作 & 识别结果 & 置信度 & 是否正确 & 说明 \\
+  \midrule
+  1 & 待补充 & 待补充 & 待补充 & 待补充 & 动作识别结果示例 \\
+  2 & 待补充 & 待补充 & 待补充 & 待补充 & 动作识别结果示例 \\
+  \bottomrule
+\end{longtable}
+
+\subsection{当前问题与改进方向}
+
+实时单词识别模型已经能够支撑当前固定词表下的移动端训练反馈，但该部分功能仍然存在一定局限。首先，自采数据主要来自系统维护阶段的受控采集，采集人数、拍摄环境和动作变化范围有限，因此模型效果主要反映当前系统数据范围内的识别能力。其次，部分手势动作可能在手型、手部位置或动作轨迹上较为接近，容易在识别过程中出现混淆。后续优化重点应放在样本规模扩充、易混淆动作分析、采集规范优化和实时反馈体验提升等方面。
+
+\section{句子视频识别任务与数据资源选择}
+
+实时单词识别主要用于移动端训练反馈，而句子视频识别则进一步面向短视频辅助交流场景。该任务的目标是在有限词表条件下，从一段手语短视频中识别出多个可能连续出现的词级动作，并将识别结果整理为用户能够理解的文本内容。
+
+\subsection{句子视频识别任务定位}
+
+本项目中的句子视频识别并不等同于开放域连续手语翻译，而是在有限词表和受限场景下对短视频识别链路进行验证。系统希望完成的是一条可接入 HearBridge 的工程流程：用户选择本地手语视频，识别服务输出词级候选结果，服务端组织中文映射，并进一步通过语义修正得到更自然的展示结果。
+
+\subsection{数据资源与技术选择}
+
+句子视频识别任务没有直接沿用实时单词识别中的自采数据模型。自采数据主要对应 HearBridge 系统当前维护的训练动作，更适合验证移动端实时训练反馈和模型发布闭环；而句子视频识别需要在一段视频中识别多个连续出现的词级动作，并进一步组织为可读文本。
+
+本项目使用 WLASL 作为句子视频识别实验的数据来源，并从中选取 25 个常见词汇构成小词表，用于当前系统中的句子视频识别实验。采用 25 词而不是完整大词表，是为了在实验可控性和表达丰富度之间取得平衡。
+
+\begin{longtable}{L{0.10\textwidth} L{0.18\textwidth} L{0.30\textwidth} L{0.30\textwidth}}
+  \caption{句子视频识别小词表类别说明表}
+  \label{tab:chapter06-wlasl-small-vocab}\\
+  \toprule
+  序号 & Gloss 标签 & 中文含义 & 类别类型 \\
+  \midrule
+  1 & bad & 不好 / 坏 & 评价词 \\
+  2 & deaf & 聋 / 听障 & 身份或状态相关词 \\
+  3 & family & 家人 / 家庭 & 常用名词 \\
+  4 & friend & 朋友 & 常用名词 \\
+  5 & go & 去 & 常用动词 \\
+  6 & good & 好 & 评价词 \\
+  7 & help & 帮助 & 常用动词 \\
+  8 & home & 家 & 常用名词 \\
+  9 & language & 语言 & 常用名词 \\
+  10 & learn & 学习 & 常用动词 \\
+  11 & meet & 见面 & 常用动词 \\
+  12 & no & 不 / 不是 & 应答词 \\
+  13 & please & 请 & 礼貌表达 \\
+  14 & school & 学校 & 常用名词 \\
+  15 & sorry & 对不起 & 礼貌表达 \\
+  16 & teacher & 老师 & 常用名词 \\
+  17 & today & 今天 & 时间词 \\
+  18 & tomorrow & 明天 & 时间词 \\
+  19 & want & 想要 & 常用动词 \\
+  20 & what & 什么 & 疑问词 \\
+  21 & who & 谁 & 疑问词 \\
+  22 & why & 为什么 & 疑问词 \\
+  23 & work & 工作 & 常用动词 / 名词 \\
+  24 & yes & 是 / 对 & 应答词 \\
+  25 & you & 你 / 你们 & 人称代词 \\
+  \bottomrule
+\end{longtable}
+
+\subsection{特征方案与模型输入设计}
+
+句子视频识别任务在特征方案上没有直接沿用实时单词识别模型中的 30 帧 166 维输入，而是采用 20 帧增强特征作为词级分类模型的输入。这样设计的主要原因在于，句子视频识别面对的是已经录制完成的短视频，视频中可能包含多个连续词汇、动作过渡帧和不同长度的词段。如果仍然使用较长的 30 帧窗口，单个窗口更容易覆盖多个词汇或较长过渡区域，不利于后续进行词段划分。
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-8-plus-feature-232.png}{句子视频识别 $20\times232$ plus 特征构成示意图}{fig:chapter06-plus-feature-232}
+
+
+\begin{longtable}{L{0.22\textwidth} L{0.12\textwidth} L{0.34\textwidth} L{0.24\textwidth}}
+  \caption{句子视频识别 plus 特征维度构成表}
+  \label{tab:chapter06-plus-feature-dim}\\
+  \toprule
+  特征部分 & 维度 & 组成 & 作用 \\
+  \midrule
+  base\_166 & 166 & 左手 78 + 右手 78 + 姿态 10 & 基础手型与上肢姿态 \\
+  static\_plus\_28 & 28 & 姿态点、手中心、手框、手存在状态、距离 & 单帧空间增强 \\
+  dynamic\_delta\_38 & 38 & 姿态点与手部代表点相邻帧差分 & 动作变化描述 \\
+  合计 & 232 & 166 + 28 + 38 & 单帧 plus 特征 \\
+  \bottomrule
+\end{longtable}
+
+其中，base\_166 是句子视频识别特征中的基础部分。需要说明的是，该部分在维度组织上与实时单词识别中的 166 维输入相近，都是由左右手手型特征和上肢姿态辅助特征组成；但二者的关键点提取链路并不完全相同。句子视频识别部分直接使用 MediaPipe Holistic 全身模型对视频帧进行处理，并从同一次 Holistic 结果中读取 pose\_landmarks、left\_hand\_landmarks 和 right\_hand\_landmarks，再构造后续特征。
+
+static\_plus\_28 是句子视频识别中额外增加的静态增强特征，用于补充单帧内更丰富的空间关系。该部分包括鼻尖、左右肩、左右肘、左右腕等上半身关键点相对于肩中心的归一化坐标，两只手的中心位置，两只手的外接框宽高，左右手是否存在的标志，以及手腕到身体中心、手腕到手部中心的距离等信息。
+
+dynamic\_delta\_38 是用于描述动作变化的动态差分特征。系统先从每帧中提取一个 38 维动态源向量，该向量由 9 个上半身姿态点和左右手各 5 个代表性手部点组成，每个点使用二维坐标，共 19 个点、38 维。随后，系统计算当前帧动态源向量与上一帧动态源向量之间的差值，形成动态差分特征。
+
+\section{句子视频识别模型训练}
+
+在完成句子视频识别的数据资源选择和特征方案设计后，还需要说明词级分类模型的训练过程。句子视频识别并不是直接依赖实时单词识别模型，也不是在上传视频时临时训练模型，而是先使用 WLASL 小词表中的词级视频离线构建训练特征，再训练一个能够识别固定词表中单个词汇动作的时序分类模型。
+
+\subsection{特征数据集构建与输入组织}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-9-sentence-feature-build-flow.png}{句子视频识别特征数据集构建流程图}{fig:chapter06-sentence-feature-build-flow}
+
+
+句子视频识别模型的训练数据来自 WLASL 小词表中的词级视频。每个原始视频通常对应一个独立手语词汇，因此训练阶段的目标是将每个词级视频转换为一个固定形状的时序特征样本。系统首先根据样本清单读取每个视频路径和对应标签，随后使用 OpenCV 读取视频全部帧，并通过 MediaPipe Holistic 对每一帧进行人体姿态和左右手关键点检测。
+
+训练阶段不会直接从整段视频等间隔抽取 20 帧，而是先根据手部检测结果确定有效动作窗口。系统逐帧记录当前帧是否检测到至少一只手，形成 hand\_flags 序列；如果检测到手部的帧数达到最小阈值，则以第一个 hand\_flags=True 的帧作为动作区域起点，以最后一个 hand\_flags=True 的帧作为动作区域终点，并在前后各扩展一定 padding 帧。
+
+动作窗口确定后，系统从该窗口内重采样 20 个帧下标。重采样采用线性采样方式，从动作窗口起点到终点均匀生成 20 个采样位置，并四舍五入为实际帧下标。对于每个采样帧，系统调用 232 维 plus 特征构造方法，最终将一个词级视频转换为形状为 $20\times232$ 的训练样本。
+
+\begin{longtable}{L{0.24\textwidth} L{0.32\textwidth} L{0.34\textwidth}}
+  \caption{句子视频识别特征数据集文件说明表}
+  \label{tab:chapter06-sentence-feature-files}\\
+  \toprule
+  文件名 & 内容 & 作用 \\
+  \midrule
+  X.npy & 样本数 $\times$ 20 $\times$ 232 特征数组 & 模型输入 \\
+  y.npy & 类别编号数组 & 模型标签 \\
+  labels.json & Gloss 标签映射 & 推理结果反查 Gloss \\
+  sample\_index.csv & 样本来源、动作窗口、采样帧等信息 & 数据追踪与质量检查 \\
+  config.json & 特征构建配置 & 记录构建参数 \\
+  \bottomrule
+\end{longtable}
+
+\subsection{词级分类模型结构与训练策略}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-10-word-classifier-structure.png}{词级分类模型结构图}{fig:chapter06-word-classifier-structure}
+
+
+在获得 X.npy、y.npy 和 labels.json 后，训练脚本加载全部 $20\times232$ 特征样本，并根据标签数量确定分类类别数。为了保证训练、验证和测试数据中各类别分布相对均衡，系统采用按类别分层划分策略，将样本划分为训练集、验证集和测试集。
+
+词级分类模型采用轻量时序分类结构。模型输入形状为 $20\times232$，首先经过 Masking 层以处理可能存在的零值填充；随后使用两层双向 GRU 提取时间序列特征。第一层双向 GRU 设置 96 个隐单元并返回完整时间序列，第二层双向 GRU 设置 64 个隐单元并输出定长向量。每层 GRU 后使用 Layer Normalization 稳定特征分布。
+
+\begin{lstlisting}[style=whuCode,caption={词级分类模型结构},label={lst:chapter06-word-classifier-structure}]
+输入：20×232 时序特征
+-> Masking(mask_value=0.0)
+-> Bidirectional GRU(96, return_sequences=True)
+-> LayerNormalization
+-> Bidirectional GRU(64, return_sequences=False)
+-> LayerNormalization
+-> Dense(128, ReLU)
+-> Dropout
+-> Dense(64, ReLU)
+-> Dropout
+-> Dense(class_count, Softmax)
+\end{lstlisting}
+
+\begin{longtable}{L{0.24\textwidth} L{0.24\textwidth} L{0.40\textwidth}}
+  \caption{词级分类模型训练参数表}
+  \label{tab:chapter06-word-model-train-params}\\
+  \toprule
+  参数 & 取值 & 说明 \\
+  \midrule
+  输入形状 & $20\times232$ & 单个词级样本 \\
+  模型结构 & BiGRU + Dense & 时序分类 \\
+  优化器 & Adam & 参数优化 \\
+  学习率 & 1e-3 & 初始学习率 \\
+  损失函数 & sparse categorical crossentropy & 多分类损失 \\
+  batch\_size & 8 & 小样本训练 \\
+  epochs & 120 & 最大训练轮数 \\
+  dropout & 0.35 & 防止过拟合 \\
+  评价指标 & accuracy / top3\_accuracy & Top-1 与 Top-3 分类效果 \\
+  \bottomrule
+\end{longtable}
+
+\subsection{模型产物保存与评估输出}
+
+\begin{longtable}{L{0.32\textwidth} L{0.30\textwidth} L{0.30\textwidth}}
+  \caption{句子视频识别模型训练产物说明表}
+  \label{tab:chapter06-sentence-model-artifacts}\\
+  \toprule
+  产物文件 & 内容 & 用途 \\
+  \midrule
+  best\_wlasl\_20f\_plus\_classifier.keras & 验证集表现最好的模型 & 推理阶段优先加载 \\
+  wlasl\_20f\_plus\_classifier.keras & 训练结束时保存的最终模型 & 模型备选产物 \\
+  metrics.json & 测试集指标与错误样本 & 实验结果分析 \\
+  train\_config.json & 训练参数、输入形状、数据划分和训练历史 & 复现实验 \\
+  confusion\_matrix.csv & 测试集混淆矩阵 & 类别混淆分析 \\
+  \bottomrule
+\end{longtable}
+
+训练完成后，系统会保存最终模型和最佳模型两类模型文件。当最佳模型文件存在时，推理链路会优先使用最佳模型；如果最佳模型文件不存在，则退回使用最终模型文件。除模型文件外，训练脚本还会输出 metrics.json、train\_config.json 和 confusion\_matrix.csv，为后续实验分析提供依据。
+
+\section{句子视频识别方法实现}
+
+\subsection{视频读取与帧级检测结果缓存}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-11-frame-cache-flow.png}{句子视频识别帧级检测缓存流程图}{fig:chapter06-frame-cache-flow}
+
+
+句子视频识别的输入来自用户上传的本地视频文件。服务端在进入识别流程前会对上传文件进行基本校验，包括文件后缀、文件是否为空以及文件大小等内容；校验通过后，系统为本次识别请求创建独立的临时目录，并将上传视频保存为待识别输入文件。
+
+视频保存完成后，系统首先使用 OpenCV 读取视频基础信息，包括帧宽、帧高、帧率和总帧数等。这些信息不会直接参与模型分类，而是作为输入视频的元信息写入识别结果。随后，系统通过 VideoCapture 顺序读取视频中的全部帧，并将每一帧保存到内存列表中。
+
+在获得视频帧序列后，系统使用 MediaPipe Holistic 对每一帧进行人体姿态和左右手关键点检测。系统不会在每个滑动窗口中重复运行 MediaPipe，而是先对整段视频逐帧检测，并将每一帧的检测结果缓存到 results 列表中，供后续滑动窗口特征构造阶段复用。
+
+在缓存 MediaPipe 结果的同时，系统还会记录每一帧的检测状态。pose\_flags 用于表示当前帧是否检测到人体姿态关键点，hand\_flags 用于表示当前帧是否至少检测到一只手。基于这两个标志，系统进一步计算 pose\_ratio 和 any\_hand\_ratio，分别表示整段视频中人体姿态检测覆盖率和手部检测覆盖率。
+
+\subsection{滑动窗口特征构造与推理输入生成}
+
+
+\WhuAutoFigure{0.78\textwidth}{0.42\textheight}{figures/chapter06/fig6-12-sliding-window.png}{滑动窗口构造示意图}{fig:chapter06-sliding-window}
+
+
+在完成视频读取和逐帧 MediaPipe 结果缓存后，系统需要将整段句子视频转换为词级分类模型可以接收的批量输入。由于输入视频中可能包含多个连续词汇，系统不会将整段视频压缩为一个整体样本，而是在完整帧序列上构造多个固定长度的候选窗口。每个候选窗口对应一段可能包含单个手语词汇主体动作的局部片段，并被转换为形状为 $20\times232$ 的时序特征矩阵。
+
+滑动窗口由 build\_windows 函数统一生成。设整段视频的帧级检测结果数量为 total\_frames，窗口长度为 window\_size，步长为 stride。默认 window\_size 为 20，stride 为 2。若 total\_frames 小于或等于 window\_size，系统只构造一个从第 0 帧开始的窗口；若 total\_frames 大于 window\_size，系统从第 0 帧开始，每隔 stride 帧生成一个窗口起点，直到无法继续形成完整窗口。
+
+\begin{equation}
+window\_size = 20,\quad stride = 2
+\label{eq:chapter06-window-size-stride}
+\end{equation}
+
+\begin{equation}
+starts = \{0,\ stride,\ 2\times stride,\ \cdots\}
+\label{eq:chapter06-window-starts}
+\end{equation}
+
+若最后一个 start 不等于 $total\_frames - window\_size$，则补充 $last\_start = total\_frames - window\_size$。
+
+单个窗口的特征由 build\_window\_feature 函数构造。函数从指定 start 开始，连续读取 window\_size 个帧级 MediaPipe 结果，并逐帧调用 plus 特征提取函数。每一帧会被转换为 232 维 plus 特征；连续 20 帧堆叠后，形成一个 $20\times232$ 的候选窗口输入。
+
+动态差分特征在每个滑动窗口内部重新计算。构造单个窗口特征时，系统会先将 previous\_dynamic\_source 初始化为空；窗口内第一帧由于没有上一帧作为差分参照，其 dynamic\_delta 被置为全 0；从第二帧开始，系统才根据当前帧和前一帧的 dynamic\_source 计算相邻帧差分。
+
+\begin{equation}
+X \in \mathbb{R}^{window\_count\times20\times232}
+\label{eq:chapter06-batch-infer-shape}
+\end{equation}
+
+\subsection{词级分类预测与 Gloss 序列生成}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-13-window-predict-to-gloss.png}{逐窗口预测到 Gloss 序列生成流程图}{fig:chapter06-window-predict-to-gloss}
+
+
+在生成批量推理输入 X 后，系统将其输入已经训练完成的词级分类模型，得到每个滑动窗口在 25 个 Gloss 类别上的预测概率。由于 X 中的每个样本都对应一个候选窗口，因此模型输出的每一行概率向量都可以通过 window\_meta 映射回原视频中的一段帧区间。
+
+对于第 i 个候选窗口，系统根据该窗口的概率向量按从高到低排序，取出 Top-1、Top-2 和 Top-3 候选类别及其概率。为了避免将低置信度或类别边界不明显的窗口直接纳入词段合并，系统会对每个窗口计算 Top-1 概率 top1\_prob 和 Top-1 与 Top-2 概率之间的差值 margin。只有当 top1\_prob 达到置信度阈值，并且 margin 达到类别间隔阈值时，该窗口才被标记为 accepted。
+
+\begin{equation}
+accepted = (top1\_prob \geq confidence\_threshold)\land(margin \geq margin\_threshold)
+\label{eq:chapter06-window-accepted}
+\end{equation}
+
+在得到 dense\_rows 后，系统首先根据 accepted 标志筛选出有效窗口，并将相邻的同标签窗口合并为原始词段 raw\_segments。具体而言，如果某个窗口与当前词段的 Top-1 标签相同，并且该窗口起始帧与当前词段结束帧之间的距离不超过 same\_label\_merge\_gap，则认为它们属于同一个词级动作片段。
+
+完成原始词段合并后，系统进一步过滤明显不可靠的片段。过滤规则主要包括三类：第一，blank 标签不进入最终 Gloss 序列；第二，窗口数量少于 min\_segment\_windows 的片段会被丢弃；第三，如果片段平均置信度和峰值置信度均低于设定阈值，则认为该片段整体可信度不足，也会被过滤。
+
+在短句视频中，由于滑动窗口之间高度重叠，不同标签的候选词段可能在时间区间上互相覆盖。如果仅依靠置信度过滤，仍然可能保留多个时间位置接近但标签不同的词段，最终表现为 Gloss 序列中多出无关词汇。因此，系统在 filtered\_segments 基础上继续执行词段级非极大值抑制（Non-Maximum Suppression，NMS），用于在时间上互相竞争的候选词段中保留更稳定的结果。
+
+NMS 的第一步是合并相邻或重叠的同标签词段，避免同一个词被拆成多个连续重复片段。第二步是为每个候选词段计算稳定性分数。系统并不只使用 max\_confidence 作为排序依据，因为短暂误报也可能在某一个窗口中出现较高峰值。相比之下，一个更可靠的词段通常应该在多个连续窗口中保持较高概率。
+
+\begin{equation}
+score = avg\_confidence \times \log(1 + window\_count)
+\label{eq:chapter06-segment-score}
+\end{equation}
+
+NMS 的第三步是判断不同词段之间是否存在竞争关系。系统主要从两个角度判断：一是中心帧距离，如果两个词段的 center\_frame 距离小于设定抑制半径，则认为它们可能对应同一段动作区域；二是时间区间重叠，如果两个词段的起止帧高度重叠，或者其中一个词段的大部分区域被另一个词段覆盖，也认为它们属于竞争候选。对于存在竞争关系的词段，系统按照稳定性分数只保留分数更高的片段。
+
+经过过滤与重叠抑制后，系统得到最终词段 final\_segments。final\_segments 按时间顺序排列，每个片段都包含 Gloss 标签、起止帧、窗口数量、平均置信度和最大置信度等信息。随后，系统从 final\_segments 中依次提取 label 字段，形成 rawSequence，也就是句子视频识别的 Gloss 序列输出。
+
+\subsection{候选序列生成与 DeepSeek 语义修正}
+
+在得到 rawSequence 后，系统还需要将模型识别出的 Gloss 序列转换为用户能够理解的中文表达。由于句子视频识别结果来自滑动窗口分类和词段后处理，rawSequence 中仍然可能存在边界插入词、局部词汇误判或表达不够自然等问题。因此，本系统在直接中文映射之外，引入 DeepSeek 语义修正模块，对 Gloss 序列进行候选排序和忠实自然化翻译。
+
+DeepSeek 并不直接参与视频识别，也不重新分析原始图像帧。视觉识别仍由 Python 端的 MediaPipe 特征提取和词级分类模型完成；DeepSeek 接收的是后端整理后的文本和候选信息，其作用是在程序生成的有限候选序列中选择更合理的一项，并将所选 Gloss 序列转换为自然的英文和中文表达。
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-14-deepseek-candidate-correction.png}{DeepSeek 候选序列语义修正流程图}{fig:chapter06-deepseek-candidate-correction}
+
+
+\begin{longtable}{L{0.20\textwidth} L{0.24\textwidth} L{0.28\textwidth} L{0.20\textwidth}}
+  \caption{DeepSeek 语义修正输入信息说明表}
+  \label{tab:chapter06-deepseek-input-fields}\\
+  \toprule
+  输入字段 & 数据来源 & 主要内容 & 作用 \\
+  \midrule
+  rawSequence & Python 句子视频识别结果 & 原始 Gloss 序列 & 表示视觉识别模块输出的原始词级结果 \\
+  rawTextZh & 后端中文映射结果 & 逐词映射后的中文文本 & 作为直接中文展示结果和语义修正参照 \\
+  segments & Python 返回的 segmentTopK & 词段起止帧、原始标签、中文标签、置信度和 Top-K 候选 & 为 DeepSeek 选择候选序列提供视觉证据和局部替换依据 \\
+  candidates & 后端候选生成模块 & 由 keep、remove、replace 组合生成的合法候选 Gloss 序列 & 限制 DeepSeek 只能从程序生成的候选中选择，避免自由改写 \\
+  \bottomrule
+\end{longtable}
+
+\begin{lstlisting}[style=whuCode,caption={DeepSeek 语义修正输入结构示例},label={lst:chapter06-deepseek-input-example}]
+{
+  "rawSequence": ["you", "want", "learn"],
+  "rawTextZh": "你 想要 学习",
+  "segments": [
+    {
+      "segmentIndex": 1,
+      "startFrame": 4,
+      "endFrame": 28,
+      "rawLabel": "you",
+      "rawLabelZh": "你",
+      "avgConfidence": 0.86,
+      "maxConfidence": 0.94,
+      "topK": [
+        { "label": "you", "labelZh": "你", "avgProb": 0.86, "maxProb": 0.94, "hitCount": 8 },
+        { "label": "who", "labelZh": "谁", "avgProb": 0.21, "maxProb": 0.32, "hitCount": 3 }
+      ]
+    }
+  ],
+  "candidates": [
+    { "candidateId": "C000", "sequence": ["you", "want", "learn"], "edits": [], "editCount": 0, "source": "raw" },
+    { "candidateId": "C001", "sequence": ["you", "learn"], "edits": [{ "type": "remove", "segmentIndex": 2, "from": "want", "to": null }], "editCount": 1, "source": "remove" }
+  ]
+}
+\end{lstlisting}
+
+后端首先基于原始词段和每个词段的 Top-K 候选构造候选 Gloss 序列。对于每个词段，程序生成三类操作选项：保留原标签、删除该词段、使用该词段 Top-K 中的其他候选标签进行替换。随后，系统对各词段的操作选项进行组合，形成一组合法候选序列 candidates。为了避免候选空间过大和修正幅度过强，后端设置了编辑次数约束：总编辑次数最多为 2 次，替换次数最多为 1 次，候选序列数量最多为 81 个。
+
+DeepSeek 请求由后端统一构造。system prompt 将 DeepSeek 约束为 sign-language gloss candidate ranker and faithful naturalization translator，要求其从 candidates 中选择 exactly one candidateId，返回与所选候选完全一致的 correctedGlossSequence，并将其转换为忠实的自然英文和中文。
+
+\begin{longtable}{L{0.24\textwidth} L{0.32\textwidth} L{0.34\textwidth}}
+  \caption{DeepSeek 语义修正返回字段说明表}
+  \label{tab:chapter06-deepseek-output-fields}\\
+  \toprule
+  返回字段 & 含义 & 系统处理方式 \\
+  \midrule
+  selectedCandidateId & DeepSeek 从 candidates 中选择的候选序列编号 & 后端校验该 ID 是否存在于候选列表中，并以该 ID 对应的程序候选序列为准 \\
+  correctedGlossSequence & DeepSeek 返回的修正后 Gloss 序列 & 理论上应与 selectedCandidateId 对应候选一致；若不一致，后端信任 selectedCandidateId 对应候选 \\
+  englishSentence & 忠实英文句子或片段 & 用于中间语义解释和调试展示 \\
+  chineseTranslation & 自然中文表达 & 作为 correctedTextZh 的主要来源，用于前端展示 \\
+  translationConfidence & 翻译置信等级 & 提示用户当前结果是否可靠 \\
+  isIncomplete & 语义是否不完整 & 若为 true，说明结果可能需要以片段方式展示 \\
+  translationNote & 不确定性或缺失信息说明 & 用于解释结果不完整或谨慎表达 \\
+  reason & 选择候选的简要原因 & 用于调试和分析候选选择依据 \\
+  \bottomrule
+\end{longtable}
+
+\begin{lstlisting}[style=whuCode,caption={DeepSeek 语义修正返回结构示例},label={lst:chapter06-deepseek-output-example}]
+{
+  "selectedCandidateId": "C000",
+  "correctedGlossSequence": ["you", "want", "learn"],
+  "englishSentence": "You want to learn.",
+  "chineseTranslation": "你想学习。",
+  "translationConfidence": "high",
+  "isIncomplete": false,
+  "translationNote": "The gloss relation is clear and can be naturally expressed.",
+  "reason": "The raw candidate is coherent and well supported by the segment evidence."
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=whuCode,caption={删除插入噪声词后的返回结构示例},label={lst:chapter06-deepseek-remove-noise-example}]
+{
+  "selectedCandidateId": "C001",
+  "correctedGlossSequence": ["friend", "meet", "today"],
+  "englishSentence": "Meet a friend today.",
+  "chineseTranslation": "今天见朋友。",
+  "translationConfidence": "medium",
+  "isIncomplete": false,
+  "translationNote": "The subject is not explicit, but the communication meaning is understandable.",
+  "reason": "The selected candidate removes one likely inserted boundary-noise word while preserving a realistic short communication gloss."
+}
+\end{lstlisting}
+
+后端接收到 DeepSeek 返回内容后，并不会无条件采用模型写出的 correctedGlossSequence，而是先根据 selectedCandidateId 查找程序生成的候选序列。如果 selectedCandidateId 不存在、返回 JSON 无法解析，或 DeepSeek 调用失败，系统会进入 fallback 分支，保留原始 rawSequence 和 rawTextZh。该机制保证语义修正结果始终受到候选序列约束，并避免大语言模型自由生成不受视觉证据支持的新内容。
+
+\section{句子视频识别实验结果分析}
+
+本节用于对句子视频识别模型和完整识别链路的运行效果进行分析。具体数值、表格和图像需要根据后续整理到的 metrics.json、confusion\_matrix.csv、句子视频推理结果、DeepSeek 修正前后结果等实验产物填写。当前先保留论文结构和插入位置。
+
+\subsection{词级分类模型测试结果}
+
+\begin{longtable}{L{0.24\textwidth} L{0.22\textwidth} L{0.44\textwidth}}
+  \caption{词级分类模型测试结果表}
+  \label{tab:chapter06-word-model-test-result}\\
+  \toprule
+  指标 & 结果 & 说明 \\
+  \midrule
+  test\_loss & 待补充 & 测试集损失 \\
+  test\_accuracy & 待补充 & 测试集 Top-1 分类准确率 \\
+  test\_top3\_accuracy & 待补充 & 测试集中真实标签进入 Top-3 的比例 \\
+  train\_count & 待补充 & 训练集样本数量 \\
+  val\_count & 待补充 & 验证集样本数量 \\
+  test\_count & 待补充 & 测试集样本数量 \\
+  class\_count & 待补充 & 词表类别数量 \\
+  \bottomrule
+\end{longtable}
+
+
+\WhuAutoFigure{0.78\textwidth}{0.48\textheight}{figures/chapter06/fig6-15-word-model-confusion-matrix.png}{词级分类模型混淆矩阵}{fig:chapter06-word-model-confusion-matrix}
+
+
+\begin{longtable}{L{0.18\textwidth} L{0.18\textwidth} L{0.18\textwidth} L{0.26\textwidth} L{0.20\textwidth}}
+  \caption{词级分类模型错误样本分析表}
+  \label{tab:chapter06-word-model-error-analysis}\\
+  \toprule
+  样本编号 & 真实 Gloss & 预测 Gloss & Top-3 候选 & 错误说明 \\
+  \midrule
+  待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  \bottomrule
+\end{longtable}
+
+\subsection{拼接句子视频识别结果}
+
+\begin{longtable}{L{0.07\textwidth} L{0.15\textwidth} L{0.22\textwidth} L{0.22\textwidth} L{0.12\textwidth} L{0.14\textwidth}}
+  \caption{拼接句子视频识别结果表}
+  \label{tab:chapter06-spliced-sentence-result}\\
+  \toprule
+  序号 & 测试视频 & 期望 Gloss 序列 & 检测 Gloss 序列 & 是否匹配 & 主要问题 \\
+  \midrule
+  1 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  2 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  3 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  \bottomrule
+\end{longtable}
+
+\begin{longtable}{L{0.20\textwidth} L{0.16\textwidth} L{0.30\textwidth} L{0.28\textwidth}}
+  \caption{句子视频识别错误类型统计表}
+  \label{tab:chapter06-sentence-error-types}\\
+  \toprule
+  错误类型 & 出现次数 & 典型表现 & 可能原因 \\
+  \midrule
+  插入误报 & 待补充 & 序列中多出无关 Gloss & 动作边界或过渡帧被误识别 \\
+  漏词 & 待补充 & 期望序列中的某个 Gloss 未出现 & 词段置信度低或被 NMS 抑制 \\
+  重复词 & 待补充 & 同一 Gloss 连续出现多次 & 同标签片段未充分合并 \\
+  局部替换错误 & 待补充 & 某个 Gloss 被识别为相近词 & 手型或动作轨迹相似 \\
+  \bottomrule
+\end{longtable}
+
+\subsection{典型识别样例分析}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-16-typical-sentence-result.png}{典型句子视频识别结果展示图}{fig:chapter06-typical-sentence-result}
+
+
+\begin{longtable}{L{0.15\textwidth} L{0.17\textwidth} L{0.17\textwidth} L{0.15\textwidth} L{0.17\textwidth} L{0.14\textwidth}}
+  \caption{典型识别样例分析表}
+  \label{tab:chapter06-typical-case-analysis}\\
+  \toprule
+  样例 & 期望 Gloss & 识别 Gloss & 中文直译 & 语义修正结果 & 分析说明 \\
+  \midrule
+  正确识别样例 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  插入误报样例 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  局部替换样例 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  \bottomrule
+\end{longtable}
+
+\subsection{DeepSeek 语义修正效果分析}
+
+\begin{longtable}{L{0.22\textwidth} L{0.33\textwidth} L{0.33\textwidth}}
+  \caption{DeepSeek 语义修正前后对比表}
+  \label{tab:chapter06-deepseek-before-after}\\
+  \toprule
+  字段 & 样例一 & 样例二 \\
+  \midrule
+  rawSequence & 待补充 & 待补充 \\
+  selectedCandidateId & 待补充 & 待补充 \\
+  correctedGlossSequence & 待补充 & 待补充 \\
+  中文直译 & 待补充 & 待补充 \\
+  修正后中文 & 待补充 & 待补充 \\
+  是否修正 & 待补充 & 待补充 \\
+  说明 & 待补充 & 待补充 \\
+  \bottomrule
+\end{longtable}
+
+\begin{longtable}{L{0.20\textwidth} L{0.16\textwidth} L{0.26\textwidth} L{0.34\textwidth}}
+  \caption{DeepSeek 语义修正类型统计表}
+  \label{tab:chapter06-deepseek-correction-types}\\
+  \toprule
+  修正类型 & 出现次数 & 示例 & 说明 \\
+  \midrule
+  保留原始序列 & 待补充 & 待补充 & rawSequence 已较为连贯 \\
+  删除插入词 & 待补充 & 待补充 & 删除边界噪声后语义更清晰 \\
+  Top-K 局部替换 & 待补充 & 待补充 & 使用同词段候选替换错误标签 \\
+  fallback & 待补充 & 待补充 & DeepSeek 不可用或返回校验失败 \\
+  \bottomrule
+\end{longtable}
+
+\section{连续识别方案探索与局限性}
+
+除采用“词级分类模型 + 滑动窗口 + 词段后处理”方案外，本项目在实验过程中也对更直接的连续手语识别方案进行了探索。连续识别方案的基本思想是让模型直接从一段较长的视频特征序列中输出 Gloss 序列，而不是先将视频切分为大量候选窗口，再通过分类和后处理得到词段。这类方案通常需要使用 CTC 等序列建模方法，以处理输入帧序列和输出 Gloss 序列长度不一致的问题。
+
+在探索阶段，项目曾基于 CE-CSL 数据进行 CTC 方向实验。一类实验采用 Transformer Encoder + CTC 结构，输入特征使用 raw\_delta 模式，并通过位置编码、padding mask 和 CTC 解码完成序列预测。该方案能够完成训练并输出序列，但实验结果并不理想，主要问题表现为预测序列偏短、删除错误较多，说明模型虽然具备一定学习能力，但在当前特征、数据规模和训练配置下，仍难以稳定输出完整 Gloss 序列。因此，该方向没有被纳入 HearBridge 当前系统主线。
+
+另一类探索使用 Conformer Encoder + CTC 结构，并在 CE-CSL 数据上引入 controlled vocabulary，将低频 Gloss 映射为 \texttt{<unk>}，以降低完整词表带来的稀疏性问题。该方案在训练脚本中记录 train\_loss、dev\_loss 和 dev\_TER，并保存最佳 dev\_TER、最佳 dev\_loss 和最后一轮 checkpoint，适合作为后续连续识别研究的实验基础。但由于该实验依赖较大规模连续手语数据、训练成本较高，且与 HearBridge 当前 25 词短句识别任务和系统接入链路并不完全一致，因此本项目最终没有将其作为毕业设计系统的主要实现方案。
+
+相比之下，滑动窗口词级识别方案更适合本项目阶段目标。一方面，WLASL 小词表能够较方便地构建 $20\times232$ 词级训练样本，模型训练和调试成本较低；另一方面，滑动窗口方案可以在没有精确句子级边界标注的情况下，对短视频中的局部词段进行密集识别，并通过 NMS 和 DeepSeek 候选排序降低插入误报和语义不自然问题。
+
+当前方案仍然存在明显局限。首先，滑动窗口方式依赖固定窗口长度和步长，动作边界仍然通过后处理间接确定，无法像完整连续识别模型那样从序列层面统一建模。其次，词级分类模型的识别范围受限于小词表，无法覆盖开放场景下的大规模 Gloss。再次，DeepSeek 语义修正只能在程序生成的候选集合内选择更合理的序列，不能弥补视觉模型完全未识别出的关键词。
 
 \section{本章小结}
 
-这里填写本章小结。
+本章围绕 HearBridge 系统中的手势识别服务实现与实验分析展开说明。首先，针对移动端训练场景，介绍了实时单词识别的自采样本采集链路、$30\times166$ 特征构成、固定词表模型训练、模型发布重载机制以及移动端实时识别闭环。该部分验证了系统能够从移动端采集样本，经 Python 识别服务完成特征转换和模型训练，再通过后台发布机制将模型接入实时识别流程。
 
+其次，针对句子视频识别场景，本章说明了 WLASL 小词表数据资源、$20\times232$ plus 特征方案、词级分类模型训练过程，以及上传视频后的帧级检测缓存、滑动窗口输入生成、词级分类预测、Gloss 序列生成和 DeepSeek 语义修正流程。该部分形成了从短视频输入到 Gloss 序列，再到中文语义表达的完整处理链路。
+
+最后，本章对句子视频识别实验结果、DeepSeek 语义修正效果和连续识别探索方向预留了分析位置。当前系统采用的词级分类与滑动窗口后处理方案并非开放域连续手语翻译模型，但在有限词表和短句视频条件下具有较好的工程可控性，能够支撑毕业设计系统中的句子视频识别展示。后续工作可从扩充样本规模、优化词段边界、增强模型泛化能力、引入更成熟的连续识别模型等方面继续改进。
