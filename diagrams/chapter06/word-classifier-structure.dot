@@ -1,0 +1,46 @@
+digraph G {
+  graph [
+    rankdir=TB,
+    splines=ortho,
+    nodesep=0.35,
+    ranksep=0.42,
+    pad=0.18,
+    dpi=220,
+    bgcolor="white"
+  ];
+
+  node [
+    shape=box,
+    style="rounded",
+    color="black",
+    penwidth=1.2,
+    fontname="Microsoft YaHei",
+    fontsize=14,
+    margin="0.22,0.12"
+  ];
+
+  edge [
+    color="black",
+    arrowsize=0.75,
+    penwidth=1.1,
+    fontname="Microsoft YaHei",
+    fontsize=11
+  ];
+
+  input    [label="plus 时序特征输入"];
+  masking  [label="Masking 层"];
+  bigru1   [label="第一层双向 GRU"];
+  norm1    [label="Layer Normalization"];
+  bigru2   [label="第二层双向 GRU"];
+  norm2    [label="Layer Normalization"];
+  head     [label="全连接分类头"];
+  output   [label="Softmax 输出"];
+
+  input -> masking;
+  masking -> bigru1;
+  bigru1 -> norm1;
+  norm1 -> bigru2;
+  bigru2 -> norm2;
+  norm2 -> head;
+  head -> output;
+}
