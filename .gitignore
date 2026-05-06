@@ -1,24 +1,8 @@
-﻿build/
-*.aux
-*.bbl
-*.bcf
-*.blg
-*.fdb_latexmk
-*.fls
-*.log
-*.out
-*.run.xml
-*.synctex.gz
-*.toc
-*.xdv
-*.gz
+# Build directory
+build/
 
-# Local backup files
-.local-backups/
-*.bak
-*.bak*
-*.backup.tex
-*SAVE-ERROR*
+# Generated PDF
+main.pdf
 
 # LaTeX temporary files
 *.aux
@@ -30,6 +14,7 @@
 *.log
 *.out
 *.run.xml
+*.synctex*
 *.synctex.gz
 *.toc
 *.xdv
@@ -48,9 +33,6 @@
 *.glo
 *.gls
 *.ist
-
-# Build directory
-build/
 
 # Local backup files
 .local-backups/
@@ -64,52 +46,11 @@ build/
 __pycache__/
 *.pyc
 
-# Local generated tree files
-project-tree.txt
-project-tree-clean.txt
-git-files.txt
-
-# LaTeX temporary files
-*.aux
-*.bbl
-*.bcf
-*.blg
-*.fdb_latexmk
-*.fls
-*.log
-*.out
-*.run.xml
-*.synctex.gz
-*.toc
-*.xdv
-*.lof
-*.lot
-*.idx
-*.ilg
-*.ind
-*.nav
-*.snm
-*.vrb
-*.acn
-*.acr
-*.alg
-*.glg
-*.glo
-*.gls
-*.ist
-
-# Build directory
-build/
-
-# Generated PDF
-main.pdf
-
-
 # Generated project tree files
+project-tree.txt
 project-tree-clean.txt
 project-tree-full.txt
-project-tree.txt
+git-files.txt
 
 # Local helper scripts
 tools/
-main.synctex*
