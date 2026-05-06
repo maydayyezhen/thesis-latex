@@ -1,0 +1,22 @@
+% !TEX root = ../../../main.tex
+
+\subsection{模型产物保存与评估输出}
+
+\begin{longtable}{L{0.32\textwidth} L{0.30\textwidth} L{0.30\textwidth}}
+  \caption{句子视频识别模型训练产物说明表}
+  \label{tab:chapter06-sentence-model-artifacts}\\
+  \toprule
+  产物文件 & 内容 & 用途 \\
+  \midrule
+  best\_wlasl\_20f\_plus\_classifier.keras & 验证集表现最好的模型 & 推理阶段优先加载 \\
+  wlasl\_20f\_plus\_classifier.keras & 训练结束时保存的最终模型 & 模型备选产物 \\
+  metrics.json & 测试集指标与错误样本 & 实验结果分析 \\
+  train\_config.json & 训练参数、输入形状、数据划分和训练历史 & 复现实验 \\
+  confusion\_matrix.csv & 测试集混淆矩阵 & 类别混淆分析 \\
+  \bottomrule
+\end{longtable}
+
+训练完成后，系统会保存最终模型和最佳模型两类模型文件。
+当最佳模型文件存在时，推理链路会优先使用最佳模型；
+如果最佳模型文件不存在，则退回使用最终模型文件。
+除模型文件外，训练脚本还会输出 metrics.json、train\_config.json 和 confusion\_matrix.csv，为后续实验分析提供依据。

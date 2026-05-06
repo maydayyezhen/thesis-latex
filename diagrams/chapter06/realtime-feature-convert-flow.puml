@@ -1,0 +1,32 @@
+﻿@startuml realtime-feature-convert-flow
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 14
+skinparam dpi 150
+skinparam linetype ortho
+skinparam rectangle {
+  BorderColor black
+  BackgroundColor white
+  FontColor black
+}
+
+left to right direction
+
+rectangle "raw dataset\n{label}/sample_XXX.npz" as raw
+rectangle "扫描类别目录\n读取 raw 样本" as scan
+rectangle "帧数是否等于 30" as check
+rectangle "逐帧构造特征\n左手 78 维 + 右手 78 维 + 姿态 10 维" as frame
+rectangle "堆叠时序窗口\n30×166 特征样本" as stack
+rectangle "生成类别标签\n保存 feature 文件" as save
+rectangle "跳过样本\n记录失败原因" as skip
+
+raw --> scan
+scan --> check
+check --> frame : 是
+frame --> stack
+stack --> save
+check -down-> skip : 否
+
+@enduml

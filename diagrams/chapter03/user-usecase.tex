@@ -1,0 +1,52 @@
+% !TEX root = ../../main.tex
+\begin{tikzpicture}[
+  font=\songti\zihao{5},
+  actor/.style={draw, rounded corners, align=center, minimum width=2.1cm, minimum height=0.85cm},
+  usecase/.style={draw, ellipse, align=center, minimum width=3.2cm, minimum height=0.9cm},
+  include/.style={-{Stealth[length=2mm]}, dashed},
+  assoc/.style={-},
+  incLabel/.style={midway, fill=white, inner sep=1pt, font=\songti\zihao{6}}
+]
+
+% 演员
+\node[actor] (user) at (0,0) {普通用户};
+
+% 顶层用例
+\node[usecase] (login)    at (4.8, 3.6) {登录 / 注册};
+\node[usecase] (browse)   at (4.8, 2.0) {浏览手语资源};
+\node[usecase] (train)    at (4.8, 0.4) {手势训练};
+\node[usecase] (video)    at (4.8,-1.2) {句子视频识别};
+\node[usecase] (profile)  at (4.8,-2.8) {个人信息管理};
+\node[usecase] (logout)   at (4.8,-4.4) {退出登录};
+
+% 子用例
+\node[usecase] (detail)   at (10.0, 2.0) {查看资源详情};
+\node[usecase] (demo)     at (10.0, 0.9) {观看动作示范};
+\node[usecase] (realtime) at (10.0,-0.1) {实时手势识别};
+\node[usecase] (raw)      at (10.0,-1.5) {查看原始识别结果};
+\node[usecase] (semantic) at (10.0,-2.5) {查看语义修正结果};
+
+% 系统边界
+\node[
+  draw,
+  rounded corners,
+  inner sep=0.55cm,
+  fit=(login)(browse)(train)(video)(profile)(logout)(detail)(demo)(realtime)(raw)(semantic),
+  label={[font=\heiti\zihao{5}]above:HearBridge 移动端}
+] (system) {};
+
+% 演员到顶层用例
+\foreach \target in {login,browse,train,video,profile,logout} {
+  \draw[assoc] (user.east) -- (\target.west);
+}
+
+% include 关系
+\draw[include] (browse.east) -- node[incLabel] {<<include>>} (detail.west);
+
+\draw[include] (train.east) -- node[incLabel] {<<include>>} (demo.west);
+\draw[include] (train.east) -- node[incLabel] {<<include>>} (realtime.west);
+
+\draw[include] (video.east) -- node[incLabel] {<<include>>} (raw.west);
+\draw[include] (video.east) -- node[incLabel] {<<include>>} (semantic.west);
+
+\end{tikzpicture}

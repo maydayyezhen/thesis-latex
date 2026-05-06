@@ -1,0 +1,35 @@
+% !TEX root = ../../main.tex
+\begin{tikzpicture}[
+  font=\songti\zihao{5},
+  node distance=1.2cm and 1.8cm,
+  startstop/.style={draw, rounded corners, align=center, minimum width=2.4cm, minimum height=0.8cm},
+  process/.style={draw, rectangle, align=center, minimum width=2.6cm, minimum height=0.8cm},
+  decision/.style={draw, diamond, aspect=2.0, align=center, inner sep=1pt, minimum width=2.8cm},
+  arrow/.style={-{Stealth[length=2mm]}, thick}
+]
+
+\node[startstop] (start) {启动应用};
+\node[decision, below=of start] (loginCheck) {是否已登录};
+\node[process, left=of loginCheck] (login) {登录 / 注册};
+\node[process, below=of loginCheck] (home) {进入应用主界面};
+
+\node[decision, below=of home] (choose) {选择功能模块};
+\node[process, below left=1.0cm and 2.0cm of choose] (index) {首页\\快捷入口与内容展示};
+\node[process, below=1.0cm of choose] (training) {训练模块\\浏览资源并训练};
+\node[process, below right=1.0cm and 2.0cm of choose] (mine) {我的\\资料与账号操作};
+
+\node[startstop, below=2.0cm of training] (end) {结束或返回};
+
+\draw[arrow] (start) -- (loginCheck);
+\draw[arrow] (loginCheck) -- node[above] {否} (login);
+\draw[arrow] (login) |- (home);
+\draw[arrow] (loginCheck) -- node[right] {是} (home);
+\draw[arrow] (home) -- (choose);
+\draw[arrow] (choose) -- (index);
+\draw[arrow] (choose) -- (training);
+\draw[arrow] (choose) -- (mine);
+\draw[arrow] (index) |- (end);
+\draw[arrow] (training) -- (end);
+\draw[arrow] (mine) |- (end);
+
+\end{tikzpicture}

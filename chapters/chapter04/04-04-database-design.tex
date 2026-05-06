@@ -1,0 +1,122 @@
+% !TEX root = ../../main.tex
+
+\section{数据库设计}
+
+数据库设计是 HearBridge 系统总体设计中的重要组成部分。
+系统既需要保存普通用户、管理员、手势分类、手势资源、训练样本、模型版本和识别记录等结构化业务数据，也需要对头像、封面、动作示范资源、样本视频和模型文件等非结构化资源进行统一管理。
+因此，系统采用 MySQL 保存核心业务数据，使用 Redis 保存登录态和临时状态数据，使用 MinIO 保存文件资源，并在数据库中维护文件地址和业务关联关系。
+
+\subsection{概念结构设计}
+
+根据系统需求分析和功能模块设计，HearBridge 系统中的核心实体主要包括普通用户、管理员、手势分类、手势资源、手势样本、模型版本和识别记录等。
+普通用户主要通过移动端使用手语资源浏览、手势训练和句子视频识别等功能；
+管理员主要通过后台管理端维护手势分类、手势资源、样本数据和模型版本；
+手势分类用于组织不同类别的手势资源；
+手势资源是移动端训练和后台维护的核心业务对象；
+手势样本用于支撑模型训练和样本质量管理；
+模型版本用于记录识别模型的训练结果、文件地址和发布状态；
+识别记录用于保存用户识别过程中的输入类型、原始识别结果、语义修正结果和模型版本信息。
+
+系统核心业务 E-R 图如图~\ref{fig:chapter04-er-diagram} 所示。
+
+\WhuImageFigure[0.95\textwidth][0.62\textheight]{figures/chapter04/er-diagram.png}{系统核心业务 E-R 图}{fig:chapter04-er-diagram}
+
+如图~\ref{fig:chapter04-er-diagram} 所示，手势分类与手势资源之间是一对多关系，一个分类下可以包含多个手势资源；
+手势资源与手势样本之间是一对多关系，一个手势资源可以对应多个训练样本；
+模型版本与样本数据之间并不直接强绑定，而是通过训练过程和模型版本信息反映其使用关系；
+普通用户与识别记录之间是一对多关系，一个用户可以产生多条实时识别或视频识别记录。
+通过这些核心实体及其关系，系统能够同时支持用户侧训练识别流程和管理侧资源模型维护流程。
+
+\subsection{主要数据表设计}
+
+根据概念结构设计和系统功能需求，本文对系统中的主要数据表进行设计。
+以下表结构主要描述核心字段及其用途，具体实现时可根据业务需要补充创建时间、更新时间、逻辑删除标记和备注等通用字段。
+
+\WhuFieldTable{普通用户表}{tab:chapter04-user-table}{
+id & BIGINT & 用户主键 ID \\
+username & VARCHAR & 用户名 \\
+password & VARCHAR & 用户密码或加密后的密码 \\
+nickname & VARCHAR & 用户昵称 \\
+avatar\_url & VARCHAR & 用户头像地址 \\
+status & TINYINT & 用户状态 \\
+}
+
+\WhuFieldTable{管理员表}{tab:chapter04-admin-table}{
+id & BIGINT & 管理员主键 ID \\
+username & VARCHAR & 管理员用户名 \\
+password & VARCHAR & 管理员密码或加密后的密码 \\
+real\_name & VARCHAR & 管理员名称 \\
+status & TINYINT & 管理员状态 \\
+}
+
+\WhuFieldTable{手势分类表}{tab:chapter04-category-table}{
+id & BIGINT & 分类主键 ID \\
+category\_code & VARCHAR & 分类编码 \\
+category\_name & VARCHAR & 分类名称 \\
+sort\_order & INT & 排序值 \\
+status & TINYINT & 分类状态 \\
+}
+
+\WhuFieldTable{手势资源表}{tab:chapter04-resource-table}{
+id & BIGINT & 资源主键 ID \\
+category\_id & BIGINT & 所属分类 ID \\
+resource\_code & VARCHAR & 资源编码 \\
+resource\_name & VARCHAR & 资源名称 \\
+cover\_url & VARCHAR & 封面资源地址 \\
+demo\_url & VARCHAR & 动作示范资源地址 \\
+status & TINYINT & 资源状态 \\
+}
+
+\WhuFieldTable{手势样本表}{tab:chapter04-sample-table}{
+id & BIGINT & 样本主键 ID \\
+resource\_id & BIGINT & 关联手势资源 ID \\
+label & VARCHAR & 样本标签 \\
+sample\_url & VARCHAR & 样本文件地址 \\
+quality\_status & VARCHAR & 样本质量状态 \\
+status & TINYINT & 样本状态 \\
+}
+
+\WhuFieldTable{模型版本表}{tab:chapter04-model-table}{
+id & BIGINT & 模型版本主键 ID \\
+version\_name & VARCHAR & 模型版本名称 \\
+model\_path & VARCHAR & 模型文件路径或资源地址 \\
+action\_count & INT & 支持动作数量 \\
+accuracy & DECIMAL & 模型准确率或评估指标 \\
+publish\_status & TINYINT & 发布状态 \\
+}
+
+\WhuFieldTable{识别记录表}{tab:chapter04-record-table}{
+id & BIGINT & 识别记录主键 ID \\
+user\_id & BIGINT & 用户 ID \\
+resource\_id & BIGINT & 关联手势资源 ID \\
+model\_version\_id & BIGINT & 使用的模型版本 ID \\
+recognition\_type & VARCHAR & 识别类型 \\
+raw\_result & TEXT & 原始识别结果 \\
+corrected\_result & TEXT & 语义修正结果 \\
+}
+
+上述数据表设计围绕系统核心业务展开。
+其中，普通用户表和管理员表分别支撑移动端与后台管理端的身份认证；
+手势分类表和手势资源表用于组织训练内容；
+手势样本表用于维护训练样本；
+模型版本表用于记录识别模型版本及发布状态；
+识别记录表用于保存用户训练或句子视频识别过程中的结果信息。
+通过这些表的设计，系统能够同时支持普通用户训练识别流程和管理员资源模型维护流程。
+
+\subsection{持久层设计}
+
+HearBridge 服务端采用分层方式组织持久化访问逻辑。
+控制器层负责接收移动端和后台管理端请求，服务层负责业务规则处理和跨模块编排，持久层则负责与数据库进行交互。
+通过将数据库访问逻辑从控制器和业务服务中拆分出来，可以降低业务逻辑与 SQL 操作之间的耦合度，提高代码维护性。
+
+系统持久层主要基于 MyBatis 实现。
+对于普通用户、管理员、手势分类、手势资源、手势样本、模型版本和识别记录等核心数据，分别设计对应的数据访问接口，由持久层负责完成新增、删除、修改、查询、分页筛选和状态更新等操作。
+服务层在处理业务逻辑时不直接拼接 SQL，而是通过持久层接口完成数据访问，从而使业务处理过程更加清晰。
+
+在资源管理类功能中，持久层需要支持按分类、状态、关键词等条件查询手势资源，并为后台管理端提供分页数据。
+在样本管理和模型版本管理功能中，持久层需要支持按照资源标签、样本状态、模型发布状态等条件进行查询和更新。
+在识别记录相关功能中，持久层需要保存用户识别类型、原始识别结果、语义修正结果以及所使用的模型版本等信息，为后续结果展示和问题排查提供数据依据。
+
+此外，系统中的文件资源并不直接以二进制形式存入数据库，而是通过 MinIO 进行对象存储，数据库中仅保存文件访问地址、资源标识和业务关联信息。
+登录状态等临时数据则由 Redis 保存，避免将高频临时状态全部写入 MySQL。
+通过 MySQL、Redis 和 MinIO 的分工，系统能够分别处理结构化业务数据、临时状态数据和非结构化文件资源，使持久层设计更加清晰。

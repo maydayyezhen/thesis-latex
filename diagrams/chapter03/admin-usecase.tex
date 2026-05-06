@@ -1,0 +1,48 @@
+% !TEX root = ../../main.tex
+\begin{tikzpicture}[
+  font=\songti\zihao{5},
+  actor/.style={draw, rounded corners, align=center, minimum width=2.1cm, minimum height=0.85cm},
+  usecase/.style={draw, ellipse, align=center, minimum width=3.2cm, minimum height=0.9cm},
+  include/.style={-{Stealth[length=2mm]}, dashed},
+  assoc/.style={-},
+  incLabel/.style={midway, fill=white, inner sep=1pt, font=\songti\zihao{6}}
+]
+
+% 演员
+\node[actor] (admin) at (0,0) {系统管理员};
+
+% 顶层用例
+\node[usecase] (login)      at (4.8, 4.2) {管理员登录};
+\node[usecase] (dashboard)  at (4.8, 2.7) {查看系统概览};
+\node[usecase] (category)   at (4.8, 1.2) {手势分类管理};
+\node[usecase] (resource)   at (4.8,-0.3) {手势资源管理};
+\node[usecase] (sample)     at (4.8,-1.8) {样本管理};
+\node[usecase] (train)      at (4.8,-3.3) {模型训练管理};
+\node[usecase] (version)    at (4.8,-4.8) {模型版本管理};
+\node[usecase] (logout)     at (4.8,-6.3) {退出登录};
+
+% 子用例
+\node[usecase] (trainStart) at (10.1,-2.7) {发起模型训练};
+\node[usecase] (trainView)  at (10.1,-3.9) {查看训练结果};
+\node[usecase] (publish)    at (10.1,-5.1) {发布模型};
+
+% 系统边界
+\node[
+  draw,
+  rounded corners,
+  inner sep=0.55cm,
+  fit=(login)(dashboard)(category)(resource)(sample)(train)(version)(logout)(trainStart)(trainView)(publish),
+  label={[font=\heiti\zihao{5}]above:HearBridge 后台管理端}
+] (system) {};
+
+% 演员到顶层用例
+\foreach \target in {login,dashboard,category,resource,sample,train,version,logout} {
+  \draw[assoc] (admin.east) -- (\target.west);
+}
+
+% include 关系
+\draw[include] (train.east) -- node[incLabel] {<<include>>} (trainStart.west);
+\draw[include] (train.east) -- node[incLabel] {<<include>>} (trainView.west);
+\draw[include] (version.east) -- node[incLabel] {<<include>>} (publish.west);
+
+\end{tikzpicture}

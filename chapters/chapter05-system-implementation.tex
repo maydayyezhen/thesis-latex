@@ -1,21 +1,17 @@
-﻿\chapter{系统详细设计与实现}
+% !TEX root = ../main.tex
+\chapter{系统核心功能实现}
 
-\section{移动端设计与实现}
+本章在前文系统设计的基础上，围绕 HearBridge 系统的核心功能实现过程展开说明。
+与系统设计章节侧重架构划分、模块职责和数据关系不同，本章更关注各功能模块在工程代码中的落地方式，包括移动端页面状态组织、接口封装、实时识别通信、句子视频识别调用、服务端业务编排、后台管理端页面实现以及模型版本发布联动等内容。
 
-这里填写 HarmonyOS 移动端页面、训练流程、相机采集、WebSocket 通信和识别结果展示的实现。
+根据当前项目实际结构，HearBridge 的系统实现主要由 HarmonyOS 移动端、Spring Boot 服务端、Vue 后台管理端和 Python 手势识别服务协同完成。
+其中，移动端负责用户交互和结果展示，服务端负责业务数据管理和跨服务调用，后台管理端负责资源与模型维护，Python 识别服务负责实时识别、样本处理、模型训练与模型运行时管理。
+考虑到手势识别模型结构、特征构造和实验结果具有较强算法属性，本文将其放在第六章集中说明；
+本章只从系统功能接入和业务实现角度说明识别服务如何与主系统协作。
 
-\section{后端服务设计与实现}
-
-这里填写 Spring Boot 后端接口、业务服务、数据管理、文件管理和权限认证的实现。
-
-\section{手势识别服务设计与实现}
-
-这里填写 Python 服务中 MediaPipe 处理、特征构建、模型预测、样本采集和训练流程的实现。
-
-\section{Web 管理端设计与实现}
-
-这里填写管理端中分类管理、资源管理、样本管理、训练管理和模型版本管理的实现。
-
-\section{本章小结}
-
-这里填写本章小结。
+\input{chapters/chapter05/05-01-mobile-core-modules.tex}
+\input{chapters/chapter05/05-02-backend-core-modules.tex}
+\input{chapters/chapter05/05-03-admin-core-modules.tex}
+\input{chapters/chapter05/05-04-model-release-linkage.tex}
+\input{chapters/chapter05/05-05-exception-feedback.tex}
+\input{chapters/chapter05/05-06-summary.tex}

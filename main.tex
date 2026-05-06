@@ -1,4 +1,4 @@
-﻿\documentclass[UTF8,fontset=windows,zihao=-4,oneside,openany]{ctexbook}
+\documentclass[UTF8,fontset=windows,zihao=-4,oneside,openany]{ctexbook}
 
 % =========================================================
 % 武汉大学本科毕业论文 LaTeX 主入口
@@ -38,12 +38,119 @@
 % ==============================
 
 \usepackage{graphicx}
+\usepackage{adjustbox}
+\usepackage{xparse}
+
+% ==============================
+% 统一图片插入命令
+% ==============================
+
+% 用于插入 TikZ / PlantUML 等 LaTeX 源码图。
+% 参数：
+% #1 最大宽度，默认 0.86\textwidth
+% #2 最大高度，默认 0.58\textheight
+% #3 图源码路径
+% #4 图标题
+% #5 图标签
+\NewDocumentCommand{\WhuDiagramFigure}{O{0.86\textwidth} O{0.58\textheight} m m m}{%
+  \begin{figure}[H]
+    \centering
+    \begin{adjustbox}{max totalsize={#1}{#2},center}
+      \input{#3}
+    \end{adjustbox}
+    \caption{#4}
+    \label{#5}
+  \end{figure}
+}
+
+% 用于插入 PNG / JPG / PDF 等图片文件。
+% 参数：
+% #1 最大宽度，默认 0.86\textwidth
+% #2 最大高度，默认 0.58\textheight
+% #3 图片路径
+% #4 图标题
+% #5 图标签
+\NewDocumentCommand{\WhuImageFigure}{O{0.86\textwidth} O{0.58\textheight} m m m}{%
+  \begin{figure}[H]
+    \centering
+    \begin{adjustbox}{max totalsize={#1}{#2},center}
+      \includegraphics{#3}
+    \end{adjustbox}
+    \caption{#4}
+    \label{#5}
+  \end{figure}
+}
 \usepackage{float}
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{longtable}
+\usepackage{listings}
+
+% ==============================
+% 统一表格列类型
+% ==============================
+
+% 左对齐固定宽度列，避免窄列中文或接口路径强行两端对齐导致溢出。
+
+% ==============================
+% 统一字段表命令
+% ==============================
+
+% 用于数据库字段表、接口字段表等三列表格。
+% 参数：
+% #1 第一列宽度，默认 0.25\textwidth
+% #2 第二列宽度，默认 0.22\textwidth
+% #3 第三列宽度，默认 0.43\textwidth
+% #4 表题
+% #5 表标签
+% #6 表格内容
+\NewDocumentCommand{\WhuFieldTable}{O{0.25\textwidth} O{0.22\textwidth} O{0.43\textwidth} m m +m}{%
+  \begingroup
+  \zihao{5}
+  \begin{longtable}{L{#1} L{#2} L{#3}}
+    \caption{#4}\label{#5}\\
+    \toprule
+    字段名 & 类型 & 说明 \\
+    \midrule
+    #6
+    \bottomrule
+  \end{longtable}
+  \endgroup
+}
+
+% ==============================
+% 统一接口表命令
+% ==============================
+
+% 用于接口清单类四列表格。
+% 参数：
+% #1 第一列宽度，默认 0.14\textwidth
+% #2 第二列宽度，默认 0.13\textwidth
+% #3 第三列宽度，默认 0.33\textwidth
+% #4 第四列宽度，默认 0.30\textwidth
+% #5 表题
+% #6 表标签
+% #7 表格内容
+\NewDocumentCommand{\WhuInterfaceTable}{O{0.13\textwidth} O{0.12\textwidth} O{0.31\textwidth} O{0.28\textwidth} m m +m}{%
+  \begingroup
+  \zihao{5}
+  \setlength{\tabcolsep}{3pt}
+  \begin{longtable}{L{#1} L{#2} L{#3} L{#4}}
+    \caption{#5}\label{#6}\\
+    \toprule
+    模块 & 方法 & 接口路径 & 说明 \\
+    \midrule
+    #7
+    \bottomrule
+  \end{longtable}
+  \endgroup
+}
+
+
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit}
 
 % 图、表、公式按章编号
 \numberwithin{figure}{chapter}
@@ -55,14 +162,15 @@
 % ==============================
 
 \usepackage{caption}
+\usepackage{subcaption}
 
 \DeclareCaptionFont{whuCaptionFont}{\songti\zihao{5}}
 \DeclareCaptionLabelSeparator{whuSpace}{\quad}
 
 \captionsetup{
   font=whuCaptionFont,
-  labelfont=bf,
-  textfont=bf,
+  labelfont=normalfont,
+  textfont=normalfont,
   labelsep=whuSpace
 }
 
@@ -80,10 +188,29 @@
 \renewcommand{\tablename}{表}
 
 % ==============================
+% 代码片段样式
+% ==============================
+
+\renewcommand{\lstlistingname}{代码片段}
+
+\lstdefinestyle{whuCode}{
+  basicstyle=\ttfamily\zihao{5},
+  numbers=none,
+  frame=single,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  captionpos=b
+}
+
+
+% ==============================
 % 页眉页脚设置
 % ==============================
 
 \usepackage{fancyhdr}
+\setlength{\headheight}{13pt}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -174,6 +301,53 @@
 \newcommand{\SupervisorName}{待填写}
 \newcommand{\SubmitDate}{二〇二六年五月}
 
+
+
+% ===== 全局表格宽度修正开始 =====
+% 缩小表格列间距，减少横向溢出
+\setlength{\tabcolsep}{3pt}
+
+% 给段落和表格提供额外伸缩空间，减少 overfull
+\setlength{\emergencystretch}{3em}
+
+% 重新定义 L/C/R 列类型：
+% \dimexpr#1-2\tabcolsep\relax 用于扣除列左右间距；
+% \hspace{0pt} 允许英文长串在窄列中自动断行。
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
+% ===== 全局表格宽度修正结束 =====
+
+
+% ===== 智能占位图开始 =====
+% 用法：
+% \WhuAutoFigure{宽度}{高度}{图片路径}{图题}{label}
+% 如果图片存在：自动插入图片；
+% 如果图片不存在：显示占位框。
+\newcommand{\WhuAutoFigure}[5]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{#3}{%
+      \includegraphics[width=#1,height=#2,keepaspectratio]{#3}%
+    }{%
+      \fbox{%
+        \parbox[c][#2][c]{#1}{%
+          \centering
+          \vspace{6pt}
+          {\bfseries 占位图}\\[6pt]
+          #4\\[8pt]
+          \texttt{\detokenize{#3}}\\[6pt]
+          将真实图片放到该路径并重新编译即可
+          \vspace{6pt}
+        }%
+      }%
+    }%
+    \caption{#4}
+    \label{#5}
+  \end{figure}
+}
+% ===== 智能占位图结束 =====
+
 \begin{document}
 
 % =========================================================
@@ -230,3 +404,18 @@
 \input{backmatter/appendix}
 
 \end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

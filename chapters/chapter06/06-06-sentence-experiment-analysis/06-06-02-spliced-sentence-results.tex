@@ -1,0 +1,28 @@
+% !TEX root = ../../../main.tex
+
+\subsection{拼接句子视频识别结果}
+
+\begin{longtable}{L{0.07\textwidth} L{0.15\textwidth} L{0.22\textwidth} L{0.22\textwidth} L{0.12\textwidth} L{0.14\textwidth}}
+  \caption{拼接句子视频识别结果表}
+  \label{tab:chapter06-spliced-sentence-result}\\
+  \toprule
+  序号 & 测试视频 & 期望 Gloss 序列 & 检测 Gloss 序列 & 是否匹配 & 主要问题 \\
+  \midrule
+  1 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  2 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  3 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  \bottomrule
+\end{longtable}
+
+\begin{longtable}{L{0.20\textwidth} L{0.16\textwidth} L{0.30\textwidth} L{0.28\textwidth}}
+  \caption{句子视频识别错误类型统计表}
+  \label{tab:chapter06-sentence-error-types}\\
+  \toprule
+  错误类型 & 出现次数 & 典型表现 & 可能原因 \\
+  \midrule
+  插入误报 & 待补充 & 序列中多出无关 Gloss & 动作边界或过渡帧被误识别 \\
+  漏词 & 待补充 & 期望序列中的某个 Gloss 未出现 & 词段置信度低或被 NMS 抑制 \\
+  重复词 & 待补充 & 同一 Gloss 连续出现多次 & 同标签片段未充分合并 \\
+  局部替换错误 & 待补充 & 某个 Gloss 被识别为相近词 & 手型或动作轨迹相似 \\
+  \bottomrule
+\end{longtable}

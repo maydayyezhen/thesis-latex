@@ -1,0 +1,33 @@
+% !TEX root = ../../../main.tex
+
+\subsection{特征数据集构建与输入组织}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/sentence-feature-build-flow.png}{句子视频识别特征数据集构建流程图}{fig:chapter06-sentence-feature-build-flow}
+
+
+句子视频识别模型的训练数据来自 WLASL 小词表中的词级视频。
+每个原始视频通常对应一个独立手语词汇，因此训练阶段的目标是将每个词级视频转换为一个固定形状的时序特征样本。
+系统首先根据样本清单读取每个视频路径和对应标签，随后使用 OpenCV 读取视频全部帧，并通过 MediaPipe Holistic 对每一帧进行人体姿态和左右手关键点检测。
+
+训练阶段不会直接从整段视频等间隔抽取 20 帧，而是先根据手部检测结果确定有效动作窗口。
+系统逐帧记录当前帧是否检测到至少一只手，形成 hand\_flags 序列；
+如果检测到手部的帧数达到最小阈值，则以第一个 hand\_flags=True 的帧作为动作区域起点，以最后一个 hand\_flags=True 的帧作为动作区域终点，并在前后各扩展一定 padding 帧。
+
+动作窗口确定后，系统从该窗口内重采样 20 个帧下标。
+重采样采用线性采样方式，从动作窗口起点到终点均匀生成 20 个采样位置，并四舍五入为实际帧下标。
+对于每个采样帧，系统调用 232 维 plus 特征构造方法，最终将一个词级视频转换为形状为 $20\times232$ 的训练样本。
+
+\begin{longtable}{L{0.24\textwidth} L{0.32\textwidth} L{0.34\textwidth}}
+  \caption{句子视频识别特征数据集文件说明表}
+  \label{tab:chapter06-sentence-feature-files}\\
+  \toprule
+  文件名 & 内容 & 作用 \\
+  \midrule
+  X.npy & 样本数 $\times$ 20 $\times$ 232 特征数组 & 模型输入 \\
+  y.npy & 类别编号数组 & 模型标签 \\
+  labels.json & Gloss 标签映射 & 推理结果反查 Gloss \\
+  sample\_index.csv & 样本来源、动作窗口、采样帧等信息 & 数据追踪与质量检查 \\
+  config.json & 特征构建配置 & 记录构建参数 \\
+  \bottomrule
+\end{longtable}

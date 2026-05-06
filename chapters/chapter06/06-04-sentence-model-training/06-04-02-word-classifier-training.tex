@@ -1,0 +1,48 @@
+% !TEX root = ../../../main.tex
+
+\subsection{词级分类模型结构与训练策略}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/word-classifier-structure.png}{词级分类模型结构图}{fig:chapter06-word-classifier-structure}
+
+
+在获得 X.npy、y.npy 和 labels.json 后，训练脚本加载全部 $20\times232$ 特征样本，并根据标签数量确定分类类别数。
+为了保证训练、验证和测试数据中各类别分布相对均衡，系统采用按类别分层划分策略，将样本划分为训练集、验证集和测试集。
+
+词级分类模型采用轻量时序分类结构。
+模型输入形状为 $20\times232$，首先经过 Masking 层以处理可能存在的零值填充；
+随后使用两层双向 GRU 提取时间序列特征。
+第一层双向 GRU 设置 96 个隐单元并返回完整时间序列，第二层双向 GRU 设置 64 个隐单元并输出定长向量。
+每层 GRU 后使用 Layer Normalization 稳定特征分布。
+
+\begin{lstlisting}[style=whuCode,caption={词级分类模型结构},label={lst:chapter06-word-classifier-structure}]
+输入：20×232 时序特征
+-> Masking(mask_value=0.0)
+-> Bidirectional GRU(96, return_sequences=True)
+-> LayerNormalization
+-> Bidirectional GRU(64, return_sequences=False)
+-> LayerNormalization
+-> Dense(128, ReLU)
+-> Dropout
+-> Dense(64, ReLU)
+-> Dropout
+-> Dense(class_count, Softmax)
+\end{lstlisting}
+
+\begin{longtable}{L{0.24\textwidth} L{0.24\textwidth} L{0.40\textwidth}}
+  \caption{词级分类模型训练参数表}
+  \label{tab:chapter06-word-model-train-params}\\
+  \toprule
+  参数 & 取值 & 说明 \\
+  \midrule
+  输入形状 & $20\times232$ & 单个词级样本 \\
+  模型结构 & BiGRU + Dense & 时序分类 \\
+  优化器 & Adam & 参数优化 \\
+  学习率 & 1e-3 & 初始学习率 \\
+  损失函数 & sparse categorical crossentropy & 多分类损失 \\
+  batch\_size & 8 & 小样本训练 \\
+  epochs & 120 & 最大训练轮数 \\
+  dropout & 0.35 & 防止过拟合 \\
+  评价指标 & accuracy / top3\_accuracy & Top-1 与 Top-3 分类效果 \\
+  \bottomrule
+\end{longtable}

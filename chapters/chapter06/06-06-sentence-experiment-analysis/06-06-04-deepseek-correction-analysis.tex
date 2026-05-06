@@ -1,0 +1,32 @@
+% !TEX root = ../../../main.tex
+
+\subsection{DeepSeek 语义修正效果分析}
+
+\begin{longtable}{L{0.22\textwidth} L{0.33\textwidth} L{0.33\textwidth}}
+  \caption{DeepSeek 语义修正前后对比表}
+  \label{tab:chapter06-deepseek-before-after}\\
+  \toprule
+  字段 & 样例一 & 样例二 \\
+  \midrule
+  rawSequence & 待补充 & 待补充 \\
+  selectedCandidateId & 待补充 & 待补充 \\
+  correctedGlossSequence & 待补充 & 待补充 \\
+  中文直译 & 待补充 & 待补充 \\
+  修正后中文 & 待补充 & 待补充 \\
+  是否修正 & 待补充 & 待补充 \\
+  说明 & 待补充 & 待补充 \\
+  \bottomrule
+\end{longtable}
+
+\begin{longtable}{L{0.20\textwidth} L{0.16\textwidth} L{0.26\textwidth} L{0.34\textwidth}}
+  \caption{DeepSeek 语义修正类型统计表}
+  \label{tab:chapter06-deepseek-correction-types}\\
+  \toprule
+  修正类型 & 出现次数 & 示例 & 说明 \\
+  \midrule
+  保留原始序列 & 待补充 & 待补充 & rawSequence 已较为连贯 \\
+  删除插入词 & 待补充 & 待补充 & 删除边界噪声后语义更清晰 \\
+  Top-K 局部替换 & 待补充 & 待补充 & 使用同词段候选替换错误标签 \\
+  fallback & 待补充 & 待补充 & DeepSeek 不可用或返回校验失败 \\
+  \bottomrule
+\end{longtable}

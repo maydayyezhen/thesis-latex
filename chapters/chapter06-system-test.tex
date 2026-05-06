@@ -1,21 +1,18 @@
-﻿\chapter{系统测试与结果分析}
+% !TEX root = ../main.tex
+\chapter{手势识别服务实现与实验分析}
 
-\section{测试环境}
 
-这里填写硬件环境、软件环境、移动端环境、后端环境和识别服务环境。
+\setlength{\tabcolsep}{3pt}
+HearBridge 系统中的手势识别功能主要分为两类任务：一类是面向移动端训练场景的实时单词识别，另一类是面向短视频辅助交流场景的句子视频识别。
+实时单词识别用于支持用户在训练页面中观看动作示范后进行模仿练习，系统根据用户当前动作返回识别结果和置信度信息；
+句子视频识别则用于支持用户选择一段手语短视频，系统从视频中识别多个词级结果，并进一步展示中文映射和语义修正结果。
+本章先围绕实时单词识别说明系统闭环实现，再单独展开句子视频识别的资源选择、方法实现与实验分析。
 
-\section{功能测试}
-
-这里填写移动端、后端接口、Web 管理端和识别服务的功能测试。
-
-\section{关键流程测试}
-
-这里填写实时识别、样本采集、特征转换、模型训练和模型发布流程测试。
-
-\section{测试结果分析}
-
-这里填写测试结果、问题分析和系统可用性评价。
-
-\section{本章小结}
-
-这里填写本章小结。
+\input{chapters/chapter06/06-01-realtime-word-recognition.tex}
+\input{chapters/chapter06/06-02-realtime-result-analysis.tex}
+\input{chapters/chapter06/06-03-sentence-task-and-data.tex}
+\input{chapters/chapter06/06-04-sentence-model-training.tex}
+\input{chapters/chapter06/06-05-sentence-method-implementation.tex}
+\input{chapters/chapter06/06-06-sentence-experiment-analysis.tex}
+\input{chapters/chapter06/06-07-continuous-recognition-limitations.tex}
+\input{chapters/chapter06/06-08-summary.tex}
