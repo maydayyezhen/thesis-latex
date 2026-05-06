@@ -133,9 +133,10 @@
 % #5 表题
 % #6 表标签
 % #7 表格内容
-\NewDocumentCommand{\WhuInterfaceTable}{O{0.14\textwidth} O{0.13\textwidth} O{0.33\textwidth} O{0.30\textwidth} m m +m}{%
+\NewDocumentCommand{\WhuInterfaceTable}{O{0.13\textwidth} O{0.12\textwidth} O{0.31\textwidth} O{0.28\textwidth} m m +m}{%
   \begingroup
   \zihao{5}
+  \setlength{\tabcolsep}{3pt}
   \begin{longtable}{L{#1} L{#2} L{#3} L{#4}}
     \caption{#5}\label{#6}\\
     \toprule
@@ -170,8 +171,8 @@
 
 \captionsetup{
   font=whuCaptionFont,
-  labelfont=bf,
-  textfont=bf,
+  labelfont=normalfont,
+  textfont=normalfont,
   labelsep=whuSpace
 }
 

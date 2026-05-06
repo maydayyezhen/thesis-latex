@@ -16,6 +16,7 @@
 - 第 2 章《相关技术分析》迁移
 - 第 3 章《系统需求分析》迁移
 - 第 3 章用例图、流程图 TikZ 化
+- 第 5 章模型发布流程图 TikZ 化
 - 统一图片插入命令封装
 
 当前主要工作分支：
@@ -128,6 +129,14 @@ diagrams/chapter03/
 - fig3-4-training-flow.tex
 - fig3-5-sentence-video-flow.tex
 
+第五章模型发布流程图源码位于：
+
+diagrams/chapter05/
+
+包括：
+
+- fig5-4-model-release-flow.tex
+
 ## 统一图片命令
 
 项目在 `main.tex` 中封装了两个统一插图命令。
@@ -159,6 +168,10 @@ diagrams/chapter03/
 指定最大宽度和最大高度：
 
 \WhuImageFigure[0.9\textwidth][0.6\textheight]{figures/chapter04/system-architecture.png}{系统总体架构图}{fig:system-architecture}
+
+第五章模型发布流程图成品示例：
+
+\WhuImageFigure{figures/chapter05/fig5-4-model-release-flow.pdf}{模型版本发布与识别服务联动流程图}{fig:model-release-flow}
 
 ## 图片尺寸控制原则
 
