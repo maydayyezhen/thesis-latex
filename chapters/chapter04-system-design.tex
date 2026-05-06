@@ -22,17 +22,7 @@ HearBridge 系统采用分层式多端协同架构，整体可划分为用户访
 
 系统总体架构如图~\ref{fig:chapter04-system-architecture} 所示。
 
-\begin{figure}[H]
-  \centering
-  \fbox{
-    \parbox[c][6cm][c]{0.85\textwidth}{
-      \centering
-      TODO：后续替换为系统总体架构图
-    }
-  }
-  \caption{系统总体架构图}
-  \label{fig:chapter04-system-architecture}
-\end{figure}
+\WhuImageFigure[0.95\textwidth][0.62\textheight]{figures/chapter04/fig4-1-system-architecture.png}{系统总体架构图}{fig:chapter04-system-architecture}
 
 如图~\ref{fig:chapter04-system-architecture} 所示，HarmonyOS 移动端主要面向普通用户，提供手语资源浏览、动作示范展示、实时手势训练、句子视频识别和个人中心等功能。移动端通过 HTTP 请求访问 Spring Boot 服务端，完成用户认证、资源查询、视频识别请求提交和结果获取等操作；在实时手势识别场景中，移动端通过 WebSocket 与 Python 手势识别服务进行通信，以支持连续帧传输和实时识别结果反馈。
 
@@ -144,3 +134,7 @@ HearBridge 服务端采用分层方式组织持久化访问逻辑。控制器层
 本章在需求分析的基础上，对 HearBridge 系统进行了总体设计。首先，明确了系统设计目标与原则，提出前后端分离、多端协同、识别服务独立、资源与模型可维护以及有限场景可控等设计原则；其次，设计了系统总体架构，说明了 HarmonyOS 移动端、Vue Web 管理端、Spring Boot 服务端、Python 手势识别服务、DeepSeek 语义修正服务以及 MySQL、Redis、MinIO 等支撑组件之间的关系；随后，对系统功能模块进行了划分，分别说明了移动端、后台管理端、服务端和手势识别服务的模块职责；接着，完成了核心业务 E-R 图、主要数据表设计和持久层设计。
 
 通过本章设计，可以明确 HearBridge 系统的整体结构、功能边界和核心数据关系。下一章将在系统设计的基础上，进一步说明各端核心功能的具体实现过程。
+
+
+
+
