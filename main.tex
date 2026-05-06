@@ -84,6 +84,30 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{longtable}
+
+% ==============================
+% 统一字段表命令
+% ==============================
+
+% 用于数据库字段表、接口字段表等三列表格。
+% 参数：
+% #1 第一列宽度，默认 0.25\textwidth
+% #2 第二列宽度，默认 0.22\textwidth
+% #3 第三列宽度，默认 0.43\textwidth
+% #4 表题
+% #5 表标签
+% #6 表格内容
+\NewDocumentCommand{\WhuFieldTable}{O{0.25\textwidth} O{0.22\textwidth} O{0.43\textwidth} m m +m}{%
+  \begin{longtable}{p{#1} p{#2} p{#3}}
+    \caption{#4}\label{#5}\\
+    \toprule
+    字段名 & 类型 & 说明 \\
+    \midrule
+    #6
+    \bottomrule
+  \end{longtable}
+}
+
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{tikz}
@@ -274,6 +298,7 @@
 \input{backmatter/appendix}
 
 \end{document}
+
 
 
 
