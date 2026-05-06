@@ -1,0 +1,55 @@
+digraph G {
+  graph [
+    rankdir=LR,
+    splines=ortho,
+    nodesep=0.45,
+    ranksep=0.55,
+    pad=0.18,
+    dpi=220,
+    bgcolor="white"
+  ];
+
+  node [
+    shape=box,
+    style="rounded",
+    color="black",
+    penwidth=1.2,
+    fontname="Microsoft YaHei",
+    fontsize=13,
+    margin="0.20,0.12"
+  ];
+
+  edge [
+    color="black",
+    arrowsize=0.75,
+    penwidth=1.1,
+    fontname="Microsoft YaHei",
+    fontsize=11
+  ];
+
+  upload [
+    label="上传视频与文件校验\n后缀 / 空文件 / 大小限制"
+  ];
+
+  save [
+    label="创建临时目录并保存文件\nrequest_id / input video"
+  ];
+
+  read [
+    label="读取视频元信息与全部帧\n宽高 / 帧率 / 总帧数"
+  ];
+
+  detect [
+    label="Holistic 逐帧检测\npose / left hand / right hand"
+  ];
+
+  cache [
+    label="缓存帧级检测结果\nresults / pose_flags / hand_flags"
+  ];
+
+  reuse [
+    label="计算检测覆盖率并复用缓存\npose_ratio / any_hand_ratio\n供滑动窗口特征构造使用"
+  ];
+
+  upload -> save -> read -> detect -> cache -> reuse;
+}
