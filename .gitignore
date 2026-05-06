@@ -112,3 +112,4 @@ project-tree.txt
 
 # Local helper scripts
 tools/
+main.synctex*
