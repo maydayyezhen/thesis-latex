@@ -1,0 +1,9 @@
+% !TEX root = ../../main.tex
+\section{句子视频识别模型训练}
+
+在完成句子视频识别的数据资源选择和特征方案设计后，还需要说明词级分类模型的训练过程。
+句子视频识别并不是直接依赖实时单词识别模型，也不是在上传视频时临时训练模型，而是先使用 WLASL 小词表中的词级视频离线构建训练特征，再训练一个能够识别固定词表中单个词汇动作的时序分类模型。
+
+\input{chapters/chapter06/06-04-sentence-model-training/06-04-01-feature-dataset-build.tex}
+\input{chapters/chapter06/06-04-sentence-model-training/06-04-02-word-classifier-training.tex}
+\input{chapters/chapter06/06-04-sentence-model-training/06-04-03-model-artifacts-and-evaluation.tex}

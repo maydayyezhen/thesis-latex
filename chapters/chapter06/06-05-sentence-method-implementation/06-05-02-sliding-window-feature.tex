@@ -1,0 +1,44 @@
+% !TEX root = ../../../main.tex
+
+\subsection{滑动窗口特征构造与推理输入生成}
+
+
+\WhuAutoFigure{0.78\textwidth}{0.42\textheight}{figures/chapter06/fig6-12-sliding-window.png}{滑动窗口构造示意图}{fig:chapter06-sliding-window}
+
+
+在完成视频读取和逐帧 MediaPipe 结果缓存后，系统需要将整段句子视频转换为词级分类模型可以接收的批量输入。
+由于输入视频中可能包含多个连续词汇，系统不会将整段视频压缩为一个整体样本，而是在完整帧序列上构造多个固定长度的候选窗口。
+每个候选窗口对应一段可能包含单个手语词汇主体动作的局部片段，并被转换为形状为 $20\times232$ 的时序特征矩阵。
+
+滑动窗口由 build\_windows 函数统一生成。
+设整段视频的帧级检测结果数量为 total\_frames，窗口长度为 window\_size，步长为 stride。
+默认 window\_size 为 20，stride 为 2。
+若 total\_frames 小于或等于 window\_size，系统只构造一个从第 0 帧开始的窗口；
+若 total\_frames 大于 window\_size，系统从第 0 帧开始，每隔 stride 帧生成一个窗口起点，直到无法继续形成完整窗口。
+
+\begin{equation}
+window\_size = 20,\quad stride = 2
+\label{eq:chapter06-window-size-stride}
+\end{equation}
+
+\begin{equation}
+starts = \{0,\ stride,\ 2\times stride,\ \cdots\}
+\label{eq:chapter06-window-starts}
+\end{equation}
+
+若最后一个 start 不等于 $total\_frames - window\_size$，则补充 $last\_start = total\_frames - window\_size$。
+
+单个窗口的特征由 build\_window\_feature 函数构造。
+函数从指定 start 开始，连续读取 window\_size 个帧级 MediaPipe 结果，并逐帧调用 plus 特征提取函数。
+每一帧会被转换为 232 维 plus 特征；
+连续 20 帧堆叠后，形成一个 $20\times232$ 的候选窗口输入。
+
+动态差分特征在每个滑动窗口内部重新计算。
+构造单个窗口特征时，系统会先将 previous\_dynamic\_source 初始化为空；
+窗口内第一帧由于没有上一帧作为差分参照，其 dynamic\_delta 被置为全 0；
+从第二帧开始，系统才根据当前帧和前一帧的 dynamic\_source 计算相邻帧差分。
+
+\begin{equation}
+X \in \mathbb{R}^{window\_count\times20\times232}
+\label{eq:chapter06-batch-infer-shape}
+\end{equation}

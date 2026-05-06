@@ -1,19 +1,73 @@
 ﻿{
-  "files.exclude": {
-    "**/.local-backups": true,
-    "**/.venv": true,
-    "**/build": true,
-    "**/*.aux": true,
-    "**/*.bbl": true,
-    "**/*.bcf": true,
-    "**/*.blg": true,
-    "**/*.fdb_latexmk": true,
-    "**/*.fls": true,
-    "**/*.log": true,
-    "**/*.out": true,
-    "**/*.run.xml": true,
-    "**/*.synctex.gz": true,
-    "**/*.toc": true,
-    "**/*.xdv": true
-  }
+    "latex-workshop.latex.autoBuild.run":  "onFileChange",
+    "latex-workshop.latex.autoBuild.interval":  1000,
+    "latex-workshop.latex.recipe.default":  "first",
+    "latex-workshop.view.pdf.viewer":  "tab",
+    "latex-workshop.latex.outDir":  "%DIR%",
+    "latex-workshop.latex.tools":  [
+                                       {
+                                           "name":  "xelatex",
+                                           "command":  "xelatex",
+                                           "args":  [
+                                                        "-synctex=1",
+                                                        "-interaction=nonstopmode",
+                                                        "-file-line-error",
+                                                        "%DOC%"
+                                                    ]
+                                       },
+                                       {
+                                           "name":  "biber",
+                                           "command":  "biber",
+                                           "args":  [
+                                                        "%DOCFILE%"
+                                                    ]
+                                       }
+                                   ],
+    "latex-workshop.latex.recipes":  [
+                                         {
+                                             "name":  "xelatex -\u003e biber -\u003e xelatex * 2",
+                                             "tools":  [
+                                                           "xelatex",
+                                                           "biber",
+                                                           "xelatex",
+                                                           "xelatex"
+                                                       ]
+                                         },
+                                         {
+                                             "name":  "xelatex only",
+                                             "tools":  [
+                                                           "xelatex"
+                                                       ]
+                                         }
+                                     ],
+    "editor.wordWrap":  "on",
+    "editor.wordWrapColumn":  100,
+    "editor.wrappingIndent":  "same",
+    "editor.minimap.enabled":  false,
+    "editor.fontSize":  16,
+    "editor.lineHeight":  26,
+    "[latex]":  {
+                    "editor.wordWrap":  "on",
+                    "editor.wordWrapColumn":  100
+                },
+    "files.exclude":  {
+                          "**/.local-backups":  true,
+                          "**/.venv":  true,
+                          "**/build":  true,
+                          "**/*.aux":  true,
+                          "**/*.bbl":  true,
+                          "**/*.bcf":  true,
+                          "**/*.blg":  true,
+                          "**/*.fdb_latexmk":  true,
+                          "**/*.fls":  true,
+                          "**/*.log":  true,
+                          "**/*.out":  true,
+                          "**/*.run.xml":  true,
+                          "**/*.synctex.gz":  true,
+                          "**/*.toc":  true,
+                          "**/*.xdv":  true,
+                          "**/*SAVE-ERROR*":  true
+                      },
+    "editor.renderWhitespace":  "none",
+    "editor.guides.indentation":  false
 }

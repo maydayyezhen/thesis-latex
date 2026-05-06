@@ -1,0 +1,35 @@
+% !TEX root = ../../../main.tex
+
+\subsection{自采样本采集链路}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-1-raw-dataset-flow.png}{自采样本采集流程图}{fig:chapter06-raw-dataset-flow}
+
+
+自采样本采集链路是实时单词识别闭环的起点。
+管理员或维护人员在采集前先确定当前样本所属的手势标签，移动端随后与 Python 手势识别服务建立数据采集 WebSocket 连接，并发送采集开始消息。
+服务端接收到 start\_dataset 消息后读取其中的 label 字段，如果标签为空则返回错误提示；
+若标签有效，则清空当前连接中的采集缓存，将采集状态设置为 ready，并向前端返回当前标签、已采集有效帧数和目标窗口帧数等状态信息。
+
+采集过程采用连接级缓存设计。
+Python 服务在每个 WebSocket 连接中维护 raw\_frames、pending\_raw\_frames、pending\_label 和 waiting\_save\_confirm 等状态变量。
+其中，raw\_frames 用于保存当前正在采集的有效帧；
+pending\_raw\_frames 用于保存已经采满但尚未确认保存的样本；
+pending\_label 用于记录待保存样本的标签；
+waiting\_save\_confirm 用于避免样本采满后继续接收新帧导致数据混入。
+
+移动端持续向 WebSocket 发送图像二进制数据。
+服务端在接收到二进制帧后，首先判断采集是否已经启动，若尚未发送 start\_dataset 则返回错误提示；
+若当前已有等待确认保存的样本，则暂不继续处理新帧。
+随后，服务端根据采样时间间隔过滤过密帧，避免短时间内接收过多重复图像。
+
+每一帧图像在服务端会先转换为 OpenCV 可处理的图像格式，再由 BGR 转为 RGB 后分别送入 MediaPipe Hands 和 MediaPipe Pose。
+服务端随后提取手部关键点、手部世界坐标、手部存在状态、姿态关键点、姿态存在状态、时间戳和画面宽高等信息，整理为 raw frame。
+若当前帧未检测到有效手部或必要姿态信息，服务端不会将该帧加入样本，而是向前端返回 invalid\_frame 状态。
+
+当有效帧数量达到配置的 raw 样本窗口长度后，服务端不会立即写入磁盘，而是将当前帧序列复制到 pending\_raw\_frames，记录待保存标签，并返回 ready\_to\_save 状态。
+前端若发送 save\_dataset 消息，服务端会检查当前是否存在等待保存的完整样本，并调用 raw dataset 保存工具写入样本文件；
+若前端发送 discard\_dataset，则丢弃待保存样本。
+
+该采集链路的一个重要特点是先保存 raw dataset，而不是直接保存最终训练特征。
+raw dataset 中保留了后续特征转换所需的基础信息，因此当特征构造策略发生调整时，可以基于已有 raw 样本重新生成训练特征，而不必重新采集全部动作样本。

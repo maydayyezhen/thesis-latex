@@ -1,0 +1,13 @@
+% !TEX root = ../../main.tex
+\section{实时单词识别模型与系统闭环实现}
+
+实时单词识别是 HearBridge 系统中直接服务于移动端训练页面的识别功能。
+该功能的输入来自用户在手机端实时完成的单个手势动作，输出为当前动作类别、置信度以及模型版本等信息。
+与句子视频识别不同，实时单词识别不处理一段视频中的多个连续动作，也不涉及中文映射和语义修正，其主要目标是为用户模仿练习提供即时识别反馈。
+
+\input{chapters/chapter06/06-01-realtime-word-recognition/06-01-01-data-and-tech-selection.tex}
+\input{chapters/chapter06/06-01-realtime-word-recognition/06-01-02-raw-sample-collection.tex}
+\input{chapters/chapter06/06-01-realtime-word-recognition/06-01-03-feature-composition.tex}
+\input{chapters/chapter06/06-01-realtime-word-recognition/06-01-04-feature-conversion.tex}
+\input{chapters/chapter06/06-01-realtime-word-recognition/06-01-05-fixed-vocab-training.tex}
+\input{chapters/chapter06/06-01-realtime-word-recognition/06-01-06-model-release-reload.tex}

@@ -1,0 +1,29 @@
+% !TEX root = ../../../main.tex
+
+\subsection{固定词表模型训练}
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-3-realtime-cnn.png}{实时单词识别 1D CNN 模型结构图}{fig:chapter06-realtime-cnn}
+
+
+在完成特征转换后，实时单词识别模型使用生成的 $30\times166$ 时序特征进行固定词表分类训练。
+训练脚本首先从特征目录中读取所有 .npy 特征样本，并根据目录名称生成对应的类别标签。
+读取完成后，系统得到模型训练所需的特征矩阵 X 和标签向量 y，其中 X 的形状为“样本数 $\times$ 30 $\times$ 166”。
+
+实时单词识别模型采用 1D CNN 结构。
+由于输入数据已经是按时间排列的关键点特征序列，模型不需要从二维图像中学习空间纹理，而是需要从连续帧特征中学习动作变化模式。
+因此，模型使用一维卷积沿时间维度提取局部时序特征。
+
+\begin{lstlisting}[style=whuCode,caption={实时单词识别模型结构},label={lst:chapter06-realtime-model-structure}]
+输入：30×166 时序特征
+-> Conv1D(96, kernel_size=3, ReLU)
+-> MaxPooling1D(pool_size=2)
+-> Conv1D(160, kernel_size=3, ReLU)
+-> GlobalAveragePooling1D
+-> Dense(96, ReLU)
+-> Dropout(0.3)
+-> Dense(num_classes, Softmax)
+\end{lstlisting}
+
+模型训练使用 Adam 优化器和稀疏多分类交叉熵损失函数，评价指标为分类准确率。
+训练过程中，系统将验证集损失作为早停依据，当验证集损失在若干轮内不再下降时提前停止训练，并恢复验证集表现较好的模型权重。

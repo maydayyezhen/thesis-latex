@@ -1,0 +1,109 @@
+% !TEX root = ../../../main.tex
+
+\subsection{候选序列生成与 DeepSeek 语义修正}
+
+在得到 rawSequence 后，系统还需要将模型识别出的 Gloss 序列转换为用户能够理解的中文表达。
+由于句子视频识别结果来自滑动窗口分类和词段后处理，rawSequence 中仍然可能存在边界插入词、局部词汇误判或表达不够自然等问题。
+因此，本系统在直接中文映射之外，引入 DeepSeek 语义修正模块，对 Gloss 序列进行候选排序和忠实自然化翻译。
+
+DeepSeek 并不直接参与视频识别，也不重新分析原始图像帧。
+视觉识别仍由 Python 端的 MediaPipe 特征提取和词级分类模型完成；
+DeepSeek 接收的是后端整理后的文本和候选信息，其作用是在程序生成的有限候选序列中选择更合理的一项，并将所选 Gloss 序列转换为自然的英文和中文表达。
+
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/fig6-14-deepseek-candidate-correction.png}{DeepSeek 候选序列语义修正流程图}{fig:chapter06-deepseek-candidate-correction}
+
+
+\begin{longtable}{L{0.20\textwidth} L{0.24\textwidth} L{0.28\textwidth} L{0.20\textwidth}}
+  \caption{DeepSeek 语义修正输入信息说明表}
+  \label{tab:chapter06-deepseek-input-fields}\\
+  \toprule
+  输入字段 & 数据来源 & 主要内容 & 作用 \\
+  \midrule
+  rawSequence & Python 句子视频识别结果 & 原始 Gloss 序列 & 表示视觉识别模块输出的原始词级结果 \\
+  rawTextZh & 后端中文映射结果 & 逐词映射后的中文文本 & 作为直接中文展示结果和语义修正参照 \\
+  segments & Python 返回的 segmentTopK & 词段起止帧、原始标签、中文标签、置信度和 Top-K 候选 & 为 DeepSeek 选择候选序列提供视觉证据和局部替换依据 \\
+  candidates & 后端候选生成模块 & 由 keep、remove、replace 组合生成的合法候选 Gloss 序列 & 限制 DeepSeek 只能从程序生成的候选中选择，避免自由改写 \\
+  \bottomrule
+\end{longtable}
+
+\begin{lstlisting}[style=whuCode,caption={DeepSeek 语义修正输入结构示例},label={lst:chapter06-deepseek-input-example}]
+{
+  "rawSequence": ["you", "want", "learn"],
+  "rawTextZh": "你 想要 学习",
+  "segments": [
+    {
+      "segmentIndex": 1,
+      "startFrame": 4,
+      "endFrame": 28,
+      "rawLabel": "you",
+      "rawLabelZh": "你",
+      "avgConfidence": 0.86,
+      "maxConfidence": 0.94,
+      "topK": [
+        { "label": "you", "labelZh": "你", "avgProb": 0.86, "maxProb": 0.94, "hitCount": 8 },
+        { "label": "who", "labelZh": "谁", "avgProb": 0.21, "maxProb": 0.32, "hitCount": 3 }
+      ]
+    }
+  ],
+  "candidates": [
+    { "candidateId": "C000", "sequence": ["you", "want", "learn"], "edits": [], "editCount": 0, "source": "raw" },
+    { "candidateId": "C001", "sequence": ["you", "learn"], "edits": [{ "type": "remove", "segmentIndex": 2, "from": "want", "to": null }], "editCount": 1, "source": "remove" }
+  ]
+}
+\end{lstlisting}
+
+后端首先基于原始词段和每个词段的 Top-K 候选构造候选 Gloss 序列。
+对于每个词段，程序生成三类操作选项：保留原标签、删除该词段、使用该词段 Top-K 中的其他候选标签进行替换。
+随后，系统对各词段的操作选项进行组合，形成一组合法候选序列 candidates。
+为了避免候选空间过大和修正幅度过强，后端设置了编辑次数约束：总编辑次数最多为 2 次，替换次数最多为 1 次，候选序列数量最多为 81 个。
+
+DeepSeek 请求由后端统一构造。
+system prompt 将 DeepSeek 约束为 sign-language gloss candidate ranker and faithful naturalization translator，要求其从 candidates 中选择 exactly one candidateId，返回与所选候选完全一致的 correctedGlossSequence，并将其转换为忠实的自然英文和中文。
+
+\begin{longtable}{L{0.24\textwidth} L{0.32\textwidth} L{0.34\textwidth}}
+  \caption{DeepSeek 语义修正返回字段说明表}
+  \label{tab:chapter06-deepseek-output-fields}\\
+  \toprule
+  返回字段 & 含义 & 系统处理方式 \\
+  \midrule
+  selectedCandidateId & DeepSeek 从 candidates 中选择的候选序列编号 & 后端校验该 ID 是否存在于候选列表中，并以该 ID 对应的程序候选序列为准 \\
+  correctedGlossSequence & DeepSeek 返回的修正后 Gloss 序列 & 理论上应与 selectedCandidateId 对应候选一致；若不一致，后端信任 selectedCandidateId 对应候选 \\
+  englishSentence & 忠实英文句子或片段 & 用于中间语义解释和调试展示 \\
+  chineseTranslation & 自然中文表达 & 作为 correctedTextZh 的主要来源，用于前端展示 \\
+  translationConfidence & 翻译置信等级 & 提示用户当前结果是否可靠 \\
+  isIncomplete & 语义是否不完整 & 若为 true，说明结果可能需要以片段方式展示 \\
+  translationNote & 不确定性或缺失信息说明 & 用于解释结果不完整或谨慎表达 \\
+  reason & 选择候选的简要原因 & 用于调试和分析候选选择依据 \\
+  \bottomrule
+\end{longtable}
+
+\begin{lstlisting}[style=whuCode,caption={DeepSeek 语义修正返回结构示例},label={lst:chapter06-deepseek-output-example}]
+{
+  "selectedCandidateId": "C000",
+  "correctedGlossSequence": ["you", "want", "learn"],
+  "englishSentence": "You want to learn.",
+  "chineseTranslation": "你想学习。",
+  "translationConfidence": "high",
+  "isIncomplete": false,
+  "translationNote": "The gloss relation is clear and can be naturally expressed.",
+  "reason": "The raw candidate is coherent and well supported by the segment evidence."
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=whuCode,caption={删除插入噪声词后的返回结构示例},label={lst:chapter06-deepseek-remove-noise-example}]
+{
+  "selectedCandidateId": "C001",
+  "correctedGlossSequence": ["friend", "meet", "today"],
+  "englishSentence": "Meet a friend today.",
+  "chineseTranslation": "今天见朋友。",
+  "translationConfidence": "medium",
+  "isIncomplete": false,
+  "translationNote": "The subject is not explicit, but the communication meaning is understandable.",
+  "reason": "The selected candidate removes one likely inserted boundary-noise word while preserving a realistic short communication gloss."
+}
+\end{lstlisting}
+
+后端接收到 DeepSeek 返回内容后，并不会无条件采用模型写出的 correctedGlossSequence，而是先根据 selectedCandidateId 查找程序生成的候选序列。
+如果 selectedCandidateId 不存在、返回 JSON 无法解析，或 DeepSeek 调用失败，系统会进入 fallback 分支，保留原始 rawSequence 和 rawTextZh。
+该机制保证语义修正结果始终受到候选序列约束，并避免大语言模型自由生成不受视觉证据支持的新内容。

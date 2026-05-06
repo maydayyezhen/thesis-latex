@@ -104,3 +104,11 @@ build/
 # Generated PDF
 main.pdf
 
+
+# Generated project tree files
+project-tree-clean.txt
+project-tree-full.txt
+project-tree.txt
+
+# Local helper scripts
+tools/

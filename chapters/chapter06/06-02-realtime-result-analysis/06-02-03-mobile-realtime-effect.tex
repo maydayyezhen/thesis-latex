@@ -1,0 +1,23 @@
+% !TEX root = ../../../main.tex
+
+\subsection{移动端实时识别效果}
+
+
+\WhuAutoFigure{0.46\textwidth}{0.62\textheight}{figures/chapter06/fig6-7-mobile-realtime-result.png}{移动端实时识别效果图}{fig:chapter06-mobile-realtime-result}
+
+
+模型训练完成并发布后，需要进一步验证其在移动端实时训练场景中的运行效果。
+用户进入手势训练页面后，首先查看当前手语资源的动作示范，然后点击开始识别。
+移动端建立与 Python 手势识别服务之间的 WebSocket 连接，并持续发送摄像头采集到的图像帧。
+识别服务在接收到足够有效帧后构造特征窗口，调用当前发布模型进行推理，并将识别标签、置信度、有效帧数量和模型版本名称等信息返回移动端。
+
+\begin{longtable}{L{0.10\textwidth} L{0.18\textwidth} L{0.18\textwidth} L{0.16\textwidth} L{0.14\textwidth} L{0.24\textwidth}}
+  \caption{移动端实时识别结果示例}
+  \label{tab:chapter06-mobile-realtime-examples}\\
+  \toprule
+  序号 & 测试动作 & 识别结果 & 置信度 & 是否正确 & 说明 \\
+  \midrule
+  1 & 待补充 & 待补充 & 待补充 & 待补充 & 动作识别结果示例 \\
+  2 & 待补充 & 待补充 & 待补充 & 待补充 & 动作识别结果示例 \\
+  \bottomrule
+\end{longtable}
