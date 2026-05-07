@@ -1,11 +1,11 @@
 digraph G {
   graph [
-    rankdir=LR,
+    rankdir=TB,
     splines=ortho,
-    nodesep=0.45,
-    ranksep=0.55,
-    pad=0.18,
-    dpi=220,
+    nodesep=0.36,
+    ranksep=0.42,
+    pad=0.12,
+    dpi=280,
     bgcolor="white"
   ];
 
@@ -15,8 +15,8 @@ digraph G {
     color="black",
     penwidth=1.2,
     fontname="Microsoft YaHei",
-    fontsize=13,
-    margin="0.20,0.12"
+    fontsize=16,
+    margin="0.18,0.12"
   ];
 
   edge [
@@ -24,32 +24,39 @@ digraph G {
     arrowsize=0.75,
     penwidth=1.1,
     fontname="Microsoft YaHei",
-    fontsize=11
+    fontsize=12
   ];
 
   upload [
-    label="上传视频与文件校验\n后缀 / 空文件 / 大小限制"
+    label="上传视频\n文件校验"
   ];
 
   save [
-    label="创建临时目录并保存文件\nrequest_id / input video"
+    label="保存文件\n创建临时目录"
   ];
 
   read [
-    label="读取视频元信息与全部帧\n宽高 / 帧率 / 总帧数"
+    label="读取视频\n元信息与帧序列"
   ];
 
   detect [
-    label="Holistic 逐帧检测\npose / left hand / right hand"
+    label="逐帧检测\nHolistic 关键点"
   ];
 
   cache [
-    label="缓存帧级检测结果\nresults / pose_flags / hand_flags"
+    label="缓存结果\nframes / results"
   ];
 
   reuse [
-    label="计算检测覆盖率并复用缓存\npose_ratio / any_hand_ratio\n供滑动窗口特征构造使用"
+    label="统计覆盖率\n供窗口复用"
   ];
 
-  upload -> save -> read -> detect -> cache -> reuse;
+  { rank=same; upload; save; read; }
+  { rank=same; reuse; cache; detect; }
+
+  upload -> save -> read;
+  read -> detect;
+  reuse -> cache -> detect [style=invis, weight=100];
+  detect -> cache [constraint=false];
+  cache -> reuse [constraint=false];
 }

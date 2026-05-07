@@ -6,8 +6,15 @@
 自采数据主要对应 HearBridge 系统当前维护的训练动作，更适合验证移动端实时训练反馈和模型发布闭环；
 而句子视频识别需要在一段视频中识别多个连续出现的词级动作，并进一步组织为可读文本。
 
-本项目使用 WLASL 作为句子视频识别实验的数据来源，并从中选取 25 个常见词汇构成小词表，用于当前系统中的句子视频识别实验。
-采用 25 词而不是完整大词表，是为了在实验可控性和表达丰富度之间取得平衡。
+本项目使用 WLASL 作为句子视频识别实验的数据来源。
+WLASL 是面向美国手语孤立词识别的数据集，提供了较多 Gloss 类别和对应视频样本，可用于构建词级手语识别实验\cite{li-wlasl-2020}。
+需要说明的是，本文并不直接将 WLASL 等同于中文手语语料，而是利用其公开词级视频和 Gloss 标注验证“词级识别—序列组织—中文展示”的工程链路。
+在系统展示层中，Gloss 标签会进一步映射为中文词义，供 HearBridge 用户理解识别结果。
+
+为了使实验既能覆盖常见交流意图，又能保持数据规模、训练时间和错误分析的可控性，本文从 WLASL 中选取 25 个常见词汇构成小词表。
+这些词汇覆盖人称、疑问、礼貌表达、时间、评价、地点、人物身份和常用动作等类型。
+相比直接使用完整大词表，25 词设置更适合作为本科毕设阶段的闭环验证：它能够组合出“you want help”“please help teacher”“what you want today”等短句样例，同时又便于对每个类别的识别错误进行人工检查。
+表~\ref{tab:chapter06-wlasl-small-vocab} 给出了本次句子视频识别实验采用的小词表类别及中文含义。
 
 \begin{longtable}{L{0.10\textwidth} L{0.18\textwidth} L{0.30\textwidth} L{0.30\textwidth}}
   \caption{句子视频识别小词表类别说明表}
@@ -42,3 +49,21 @@
   25 & you & 你 / 你们 & 人称代词 \\
   \bottomrule
 \end{longtable}
+
+由表~\ref{tab:chapter06-wlasl-small-vocab} 可知，本次小词表并不是只选择同一语义类型的动作，而是尽量保留短句组合所需的基本成分。
+例如，you、who、what 和 why 可以构成主语或疑问表达；want、go、learn、meet、help 和 work 可以提供主要动作；today 与 tomorrow 用于表达时间；please 与 sorry 用于补充礼貌或情绪语义。
+这种词表设计使后续拼接句子视频既能形成较自然的交流片段，又不会因为类别数量过大而掩盖模型输入、窗口划分和后处理策略本身的影响。
+
+在技术路线上，句子视频识别部分继续采用 MediaPipe Holistic 作为关键点检测工具，并使用 TensorFlow / Keras 模型完成词级分类。
+选择关键点特征而不是直接使用原始 RGB 视频，主要基于三点考虑。
+第一，关键点特征能够弱化背景、服装、光照和拍摄设备差异对模型的影响。
+第二，关键点序列更容易与实时单词识别部分的特征工程经验衔接，便于在同一章内比较 166 维基础特征和 232 维 plus 特征的差异。
+第三，关键点表示的维度较低，适合在本地开发环境中快速完成数据构建、模型训练、滑动窗口推理和多轮实验分析。
+
+从工程接入角度看，当前句子视频识别服务采用固定的 WLASL-mini-v2-25 主线。
+Python 服务默认读取 \path{features_20f_plus} 中的特征数据和标签映射，加载 \path{models_20f_plus} 中的词级分类模型，并通过 \path{/api/sentence/recognize} 接口对外提供上传视频识别能力。
+该接口返回 rawSequence、rawDisplayZh、rawTextZh、segmentTopK 和 elapsedMs 等字段。
+其中，rawSequence 是视觉识别得到的原始 Gloss 序列，rawDisplayZh 与 rawTextZh 用于中文直译展示，segmentTopK 保留各词段的候选标签和置信度信息，为后续 DeepSeek 候选重排序和错误分析提供依据。
+
+图~\ref{fig:chapter06-sentence-feature-build-flow} 展示了后续特征数据集构建流程，表~\ref{tab:chapter06-plus-feature-dim} 则给出了每帧 232 维 plus 特征的组成。
+因此，本节的数据与技术选择可以概括为：以 WLASL 25 词小词表提供词级视频样本，以 MediaPipe Holistic 生成可解释的关键点输入，以 20 帧 plus 特征和词级分类模型支撑后续滑动窗口句子视频识别。
