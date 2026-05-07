@@ -2,16 +2,54 @@
 
 \subsection{模型发布、重载与实时识别联动}
 
+固定词表模型训练完成后，训练产物还需要进入系统运行链路，才能真正被移动端实时识别功能使用。
+HearBridge 系统通过模型版本管理、模型发布和识别服务重载机制，将训练产物接入后台管理端和实时识别服务。
+该流程的目标不是仅保存一个本地模型文件，而是让训练结果能够被管理端查看、被后端记录、被 Python 服务加载，并最终被移动端实时识别会话使用。
+模型发布、重载与实时识别联动流程如图~\ref{fig:chapter06-model-release-reload-flow} 所示。
 
 \WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/model-release-reload-flow.png}{模型发布、重载与实时识别联动流程图}{fig:chapter06-model-release-reload-flow}
 
-
-固定词表模型训练完成后，训练产物还需要进入系统运行链路，才能真正被移动端实时识别功能使用。
-HearBridge 系统通过模型版本管理、模型发布和识别服务重载机制，将训练产物接入后台管理端和实时识别服务。
+训练接口返回结果后，Spring Boot 后端会根据训练运行名称创建模型版本记录。
+模型版本记录包含模型文件路径、标签映射文件路径、训练曲线、混淆矩阵、评估结果、样本数量、类别数量、输入形状、训练集准确率、验证集准确率和训练耗时等信息。
+后台管理端通过模型版本列表展示这些字段，并在详情页中展示训练曲线、混淆矩阵和标签映射。
+因此，模型版本管理既承担模型发布入口的作用，也承担实验结果追踪和模型产物归档的作用。
 
 模型发布过程中，管理员在后台管理端选择某个模型版本并点击发布。
 管理端向 Spring Boot 服务端发送发布请求，服务端根据模型版本 ID 查询对应记录，并检查模型文件和标签映射文件是否可用。
 随后，服务端调用 Python 手势识别服务提供的重载接口，使 Python 服务加载指定模型文件和标签映射。
+若模型产物已经存储为 MinIO objectKey，后端会先生成模型文件和标签映射文件的访问 URL，再调用 Python 服务的 URL 重载接口；
+若模型版本仍使用历史本地路径，则直接调用路径重载接口。
+Python 服务会真实加载一次 Keras 模型并读取标签映射文件，确认文件可用后才更新当前运行时模型信息。
+后端只有在 Python 重载成功后才清除旧发布状态并标记新版本为已发布，从而避免数据库显示已发布但识别服务并未实际加载的状态。
+
+表~\ref{tab:chapter06-model-release-runtime-fields} 给出了模型发布和实时识别链路中的关键对象及字段。
+这些字段保证了管理端、后端、Python 服务和移动端之间能够围绕同一个模型版本进行协同。
+
+\begin{table}[H]
+  \centering
+  \caption{模型发布与实时识别联动字段表}
+  \label{tab:chapter06-model-release-runtime-fields}
+  \begin{tabular}{L{0.18\textwidth} L{0.28\textwidth} L{0.44\textwidth}}
+    \toprule
+    环节 & 关键字段或接口 & 作用 \\
+    \midrule
+    模型版本记录 & versionName、runName、modelPath、labelMapPath、published & 描述训练产物来源、文件位置和发布状态 \\
+    后端发布接口 & \path{/sign/model-versions/<id>/publish} & 由管理端触发，负责发布指定模型版本 \\
+    Python 重载接口 & \path{/model/reload}、\path{/model/reload-from-url} & 校验并加载模型文件和标签映射文件 \\
+    运行时模型快照 & modelVersionName、modelPath、labelMapPath、usingPublishedModel & 新建实时识别会话时记录当前使用的模型版本 \\
+    WebSocket 返回结果 & label、confidence、validFrames、windowSize、modelVersionName & 向移动端反馈识别标签、置信度、窗口状态和模型版本信息 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 实时识别过程中，Python 服务根据当前加载的模型输出预测类别和置信度，并将结果通过 WebSocket 返回移动端。
 返回结果中除了识别标签和置信度外，还可以包含当前模型版本名称、是否使用发布模型等状态信息。
+当移动端开启实时识别时，会先与 Python 服务建立 WebSocket 会话并发送 start 消息。
+Python 服务在新建识别会话时读取当前运行时模型快照，确定本次会话使用的模型文件和标签映射。
+随后，移动端持续发送摄像头 JPEG 帧，Python 服务进行关键点检测、特征窗口构造和模型推理；
+当有效帧数量达到 30 帧后，服务端输出固定词表中的预测标签和置信度。
+如果置信度低于阈值，系统会返回不确定状态，以避免将低置信预测直接作为训练反馈。
+
+由图~\ref{fig:chapter06-model-release-reload-flow} 和表~\ref{tab:chapter06-model-release-runtime-fields} 可以看出，模型发布并不是单纯的数据库状态修改。
+它同时涉及模型产物可用性校验、Python 运行时模型切换、管理端状态刷新以及移动端识别结果展示。
+通过先重载、后发布的顺序，系统能够保证“当前发布模型”与实时识别服务实际使用的模型保持一致，从而形成从样本采集、特征转换、模型训练到模型发布和实时反馈的闭环。

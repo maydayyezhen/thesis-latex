@@ -2,28 +2,47 @@
 
 \subsection{固定词表模型训练}
 
-
-\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/realtime-cnn-structure.png}{实时单词识别 1D CNN 模型结构图}{fig:chapter06-realtime-cnn}
-
-
 在完成特征转换后，实时单词识别模型使用生成的 $30\times166$ 时序特征进行固定词表分类训练。
 训练脚本首先从特征目录中读取所有 .npy 特征样本，并根据目录名称生成对应的类别标签。
 读取完成后，系统得到模型训练所需的特征矩阵 X 和标签向量 y，其中 X 的形状为“样本数 $\times$ 30 $\times$ 166”。
+为了降低样本顺序对训练结果的影响，系统按照类别进行分层打乱和划分，使训练集与验证集都尽量覆盖当前固定词表中的各个手势类别。
+
+\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/realtime-cnn-structure.png}{实时单词识别 1D CNN 模型结构图}{fig:chapter06-realtime-cnn}
 
 实时单词识别模型采用 1D CNN 结构。
 由于输入数据已经是按时间排列的关键点特征序列，模型不需要从二维图像中学习空间纹理，而是需要从连续帧特征中学习动作变化模式。
 因此，模型使用一维卷积沿时间维度提取局部时序特征。
+模型结构如图~\ref{fig:chapter06-realtime-cnn} 所示。
+输入层接收连续 30 帧、每帧 166 维的特征序列；
+前两层一维卷积负责捕捉短时间范围内手型和上肢姿态的变化；
+池化层和全局平均池化层用于压缩时间维度上的冗余信息；
+全连接层进一步整合时序特征，并通过 Softmax 输出每个固定词表类别的概率。
 
-\begin{lstlisting}[style=whuCode,caption={实时单词识别模型结构},label={lst:chapter06-realtime-model-structure}]
-输入：30×166 时序特征
--> Conv1D(96, kernel_size=3, ReLU)
--> MaxPooling1D(pool_size=2)
--> Conv1D(160, kernel_size=3, ReLU)
--> GlobalAveragePooling1D
--> Dense(96, ReLU)
--> Dropout(0.3)
--> Dense(num_classes, Softmax)
-\end{lstlisting}
+表~\ref{tab:chapter06-realtime-model-train-config} 给出了实时单词识别模型的主要结构与训练参数。
+该模型规模较小，能够在当前自采小词表数据上快速完成训练，并且推理阶段只需要处理关键点特征而非原始图像像素，适合用于移动端训练页面的实时反馈。
+
+\begin{table}[H]
+  \centering
+  \caption{实时单词识别模型结构与训练参数表}
+  \label{tab:chapter06-realtime-model-train-config}
+  \begin{tabular}{L{0.20\textwidth} L{0.28\textwidth} L{0.42\textwidth}}
+    \toprule
+    项目 & 设置 & 作用 \\
+    \midrule
+    输入形状 & $30\times166$ & 表示连续 30 帧、每帧 166 维关键点特征 \\
+    时序特征提取 & 两层 Conv1D & 沿时间维度提取局部动作变化模式 \\
+    时间维压缩 & MaxPooling1D 与 GlobalAveragePooling1D & 降低时间维冗余并汇聚整体动作特征 \\
+    分类层 & Dense + Softmax & 输出固定词表中各类别的预测概率 \\
+    优化器 & Adam & 用于模型参数迭代更新 \\
+    损失函数 & sparse categorical crossentropy & 适用于整数类别标签的多分类任务 \\
+    训练控制 & 最多 50 轮，batch size 为 8，早停耐心值为 8 & 验证集损失长期不下降时提前停止训练并恢复较优权重 \\
+    输出产物 & 模型文件、标签映射、训练曲线、混淆矩阵、评估结果和训练摘要 & 支撑后续模型登记、发布和实验分析 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 模型训练使用 Adam 优化器和稀疏多分类交叉熵损失函数，评价指标为分类准确率。
 训练过程中，系统将验证集损失作为早停依据，当验证集损失在若干轮内不再下降时提前停止训练，并恢复验证集表现较好的模型权重。
+训练结束后，Python 服务会保存模型文件和标签映射文件，同时生成训练曲线图、混淆矩阵图、评估结果文本和训练摘要 JSON。
+这些训练产物不仅用于分析模型效果，也会被后端登记为模型版本，为管理端发布和实时识别服务重载提供依据。
+因此，固定词表模型训练阶段连接了前一节的 feature 数据集和后一节的模型发布链路，是实时单词识别闭环中的核心环节。

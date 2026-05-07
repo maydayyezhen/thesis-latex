@@ -45,13 +45,13 @@
   batch\_size & 8 & 适配当前小样本训练规模 \\
   epochs & 120 & 最大训练轮数 \\
   dropout & 0.35 & 降低模型过拟合风险 \\
-  评价指标 & accuracy / top3\_accuracy & 评估 Top-1 与 Top-3 分类效果 \\
+  评价指标 & accuracy / \path{top3_accuracy} & 评估 Top-1 与 Top-3 分类效果 \\
   \bottomrule
 \end{longtable}
 
 如表~\ref{tab:chapter06-word-model-train-params} 所示，模型训练使用 Adam 优化器和稀疏多分类交叉熵损失函数。
 由于标签数组 y.npy 中保存的是整数类别编号，因此损失函数采用 sparse categorical crossentropy，而不需要将标签额外转换为 one-hot 编码。
-训练过程中，accuracy 用于衡量模型 Top-1 预测是否正确，top3\_accuracy 用于衡量真实类别是否出现在概率最高的前三个候选类别中。
+训练过程中，accuracy 用于衡量模型 Top-1 预测是否正确，\path{top3_accuracy} 用于衡量真实类别是否出现在概率最高的前三个候选类别中。
 对于后续句子视频识别任务而言，Top-3 候选结果具有重要意义。
 即使某个词级片段的 Top-1 预测不完全准确，只要真实词汇仍然位于候选集合中，后续的语义修正模块仍有机会结合上下文对结果进行调整。
 

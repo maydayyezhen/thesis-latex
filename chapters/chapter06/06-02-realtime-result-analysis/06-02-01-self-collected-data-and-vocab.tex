@@ -2,17 +2,84 @@
 
 \subsection{自采数据规模与词表说明}
 
-实时单词识别模型的训练数据来源于系统维护阶段采集的自采手势样本。
-该部分数据与 HearBridge 移动端训练资源直接对应，每一个手势类别都对应系统中的一个训练动作。
+实时单词识别模型使用 HearBridge 系统自采集的手势样本进行训练。
 
-\begin{longtable}{L{0.10\textwidth} L{0.18\textwidth} L{0.20\textwidth} L{0.16\textwidth} L{0.28\textwidth}}
-  \caption{自采手势类别与样本数量统计表}
-  \label{tab:chapter06-self-collected-samples}\\
+该部分数据来源于移动端训练页面中的样本采集流程，
+与后台管理端维护的手势资源和训练动作对应。
+移动端在采集过程中持续向 Python 手势识别服务发送图像帧，
+Python 服务对图像帧进行 MediaPipe 手部与姿态关键点检测，
+并将满足有效帧条件的结果保存为 raw dataset 样本。
+
+与公开手语数据集相比，
+自采数据规模较小，
+但它能够更直接地验证 HearBridge 系统自身的数据采集、特征转换、模型训练和模型发布链路。
+本次实时单词识别实验共使用 80 个自采特征样本，
+其中训练样本 64 个，
+验证样本 16 个，
+支持类别数为 8 类。
+每个样本被转换为 $30\times166$ 的时序特征，
+其中 30 表示固定时间窗口内的帧数，
+166 表示单帧关键点与姿态相关特征维度。
+
+表~\ref{tab:chapter06-self-collected-data-description} 给出了本次自采实时单词识别数据集的基本情况。
+
+\begin{longtable}{L{0.24\textwidth} L{0.24\textwidth} L{0.42\textwidth}}
+  \caption{自采实时单词识别数据集说明表}
+  \label{tab:chapter06-self-collected-data-description}\\
   \toprule
-  序号 & 手势标签 & 中文含义 & 样本数量 & 说明 \\
+  项目 & 结果 & 说明 \\
   \midrule
-  1 & 待补充 & 待补充 & 待补充 & 对应系统中的一个训练动作 \\
-  2 & 待补充 & 待补充 & 待补充 & 对应系统中的一个训练动作 \\
-  合计 & 待补充 & 待补充 & 待补充 & 自采固定词表训练样本总数 \\
+  数据来源 & 移动端自采样本 & 由 HearBridge 移动端训练页面采集得到 \\
+  样本总数 & 80 & 参与本次实时单词识别模型训练与验证的样本总量 \\
+  训练样本数 & 64 & 用于模型参数学习的样本数量 \\
+  验证样本数 & 16 & 用于训练后模型效果评估的样本数量 \\
+  支持类别数 & 8 & 当前固定词表中的手势类别数量 \\
+  输入形状 & $30\times166$ & 每个样本由 30 帧、每帧 166 维特征组成 \\
+  任务类型 & 固定词表分类 & 输出单个手势类别及其置信度 \\
   \bottomrule
 \end{longtable}
+
+本次训练所使用的固定词表包括数字类标签和颜色类标签。
+其中，
+数字类标签包括 \texttt{0}、\texttt{1}、\texttt{2}，
+颜色类标签包括 \texttt{black}、\texttt{blue}、\texttt{brown}、\texttt{colour} 和 \texttt{cream}。
+
+表~\ref{tab:chapter06-self-collected-label-map} 给出了本次实验使用的标签映射关系。
+
+\begin{longtable}{L{0.14\textwidth} L{0.24\textwidth} L{0.52\textwidth}}
+  \caption{实时单词识别模型标签映射表}
+  \label{tab:chapter06-self-collected-label-map}\\
+  \toprule
+  序号 & 手势标签 & 说明 \\
+  \midrule
+  0 & \texttt{0} & 数字类手势标签 \\
+  1 & \texttt{1} & 数字类手势标签 \\
+  2 & \texttt{2} & 数字类手势标签 \\
+  3 & \texttt{black} & 颜色类手势标签 \\
+  4 & \texttt{blue} & 颜色类手势标签 \\
+  5 & \texttt{brown} & 颜色类手势标签 \\
+  6 & \texttt{colour} & 颜色类手势标签 \\
+  7 & \texttt{cream} & 颜色类手势标签 \\
+  \bottomrule
+\end{longtable}
+
+从词表构成可以看出，
+本次实时单词识别实验并不追求覆盖大规模开放词汇，
+而是优先验证系统在小规模固定词表下的识别闭环是否可行。
+
+这种设计适合毕业设计阶段的系统验证。
+一方面，
+小词表能够降低样本采集和模型训练成本，
+便于快速观察模型训练效果；
+另一方面，
+这些标签能够覆盖不同类型的简单手势，
+可以用于检验关键点提取、特征转换、分类推理和移动端结果展示等流程是否能够正常工作。
+
+总体来看，
+自采数据集的价值不只在于训练一个固定词表分类模型，
+更重要的是验证 HearBridge 系统的数据闭环。
+系统能够从移动端完成样本采集，
+在 Python 服务中进行关键点提取和特征转换，
+再通过训练流程生成模型文件和标签映射文件，
+最终由后台管理端发布模型版本并接入移动端实时识别。
+这一闭环为后续扩充词表、增加样本规模和持续优化识别模型提供了基础。

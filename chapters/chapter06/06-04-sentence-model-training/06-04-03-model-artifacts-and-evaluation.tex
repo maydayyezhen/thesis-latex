@@ -22,31 +22,31 @@
 通过同时保存这些文件，可以避免只保留模型而无法追踪训练过程的问题。
 
 在模型文件方面，训练脚本会保存最佳模型和最终模型两类产物。
-最佳模型对应 best\_wlasl\_20f\_plus\_classifier.keras。
-训练过程中，系统通过 ModelCheckpoint 回调函数监控验证集准确率 val\_accuracy。
+最佳模型对应 \path{best_wlasl_20f_plus_classifier.keras}。
+训练过程中，系统通过 \path{ModelCheckpoint} 回调函数监控验证集准确率 \path{val_accuracy}。
 当当前轮次的验证集准确率优于历史结果时，系统会将该轮模型保存为最佳模型。
-最终模型对应 wlasl\_20f\_plus\_classifier.keras。
+最终模型对应 \path{wlasl_20f_plus_classifier.keras}。
 该文件在训练过程结束后保存，表示训练完成时的模型状态。
 因此，最佳模型更强调验证集表现，最终模型则用于保留训练结束时的模型版本。
 
 在后续句子视频推理过程中，系统会优先尝试加载最佳模型文件。
-如果 best\_wlasl\_20f\_plus\_classifier.keras 存在，推理脚本会直接使用该模型进行滑动窗口预测。
-如果最佳模型文件不存在，系统才会回退加载 wlasl\_20f\_plus\_classifier.keras。
+如果 \path{best_wlasl_20f_plus_classifier.keras} 存在，推理脚本会直接使用该模型进行滑动窗口预测。
+如果最佳模型文件不存在，系统才会回退加载 \path{wlasl_20f_plus_classifier.keras}。
 这种加载策略可以优先使用验证集表现较好的模型，同时保留最终模型作为备用产物，提高推理流程的鲁棒性。
 
-除模型文件外，训练脚本还会生成 metrics.json。
+除模型文件外，训练脚本还会生成 \path{metrics.json}。
 该文件保存测试集评估指标、错误样本列表以及训练集、验证集和测试集的样本数量。
-其中，测试集指标用于记录模型在独立测试集上的 loss、accuracy 和 top3\_accuracy 等结果。
+其中，测试集指标用于记录模型在独立测试集上的 loss、accuracy 和 \path{top3_accuracy} 等结果。
 错误样本列表记录预测错误样本的来源索引、真实标签、预测标签以及 Top-3 候选结果。
 这些信息可以帮助开发者定位模型容易混淆的 Gloss 类别，并为后续样本补充和特征优化提供依据。
 
-训练脚本还会生成 train\_config.json。
+训练脚本还会生成 \path{train_config.json}。
 该文件记录本次训练的特征目录、模型输出目录、随机种子、最大训练轮数、batch size、验证集比例、测试集比例和 dropout 参数。
-同时，train\_config.json 还保存输入特征数组形状、类别数量、Gloss 标签列表、训练集索引、验证集索引、测试集索引以及训练历史。
+同时，\path{train_config.json} 还保存输入特征数组形状、类别数量、Gloss 标签列表、训练集索引、验证集索引、测试集索引以及训练历史。
 其中，训练历史包含每一轮训练过程中的损失和评价指标变化。
 因此，该文件不仅可以用于说明实验参数，也可以用于复现实验过程和检查数据划分是否一致。
 
-confusion\_matrix.csv 用于保存测试集混淆矩阵。
+\path{confusion_matrix.csv} 用于保存测试集混淆矩阵。
 文件第一行记录预测类别标签，后续每一行对应一个真实类别。
 矩阵中的数值表示某一真实类别被预测为各个类别的样本数量。
 通过该文件，可以观察模型是否集中混淆某些相似 Gloss。
@@ -54,7 +54,7 @@ confusion\_matrix.csv 用于保存测试集混淆矩阵。
 因此，混淆矩阵可以为后续类别扩展和样本采集策略提供参考。
 
 从系统实现角度看，模型训练产物并不是孤立文件。
-best\_wlasl\_20f\_plus\_classifier.keras 和 wlasl\_20f\_plus\_classifier.keras 支撑后续句子视频推理。
-metrics.json 和 confusion\_matrix.csv 支撑模型效果分析。
-train\_config.json 则记录训练配置、数据划分和训练历史，保证实验过程可追踪。
+\path{best_wlasl_20f_plus_classifier.keras} 和 \path{wlasl_20f_plus_classifier.keras} 支撑后续句子视频推理。
+\path{metrics.json} 和 \path{confusion_matrix.csv} 支撑模型效果分析。
+\path{train_config.json} 则记录训练配置、数据划分和训练历史，保证实验过程可追踪。
 通过这种产物组织方式，系统能够将模型训练、测试评估和后续推理连接起来，为句子视频识别实验提供完整的结果闭环。

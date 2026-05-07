@@ -29,6 +29,9 @@
 
 \usepackage{fontspec}
 \setmainfont{Times New Roman}
+% 用于图表标题的宋体伪粗体，解决 \songti\bfseries 不明显的问题
+\setCJKfamilyfont{whusongbold}[AutoFakeBold=2.5]{SimSun}
+\newcommand{\whusongbold}{\CJKfamily{whusongbold}}
 
 % ctex 在 fontset=windows 下会自动配置宋体、黑体、楷体等中文字体。
 % 正文默认字号由 documentclass 的 zihao=-4 控制，即小四号。
@@ -40,6 +43,63 @@
 \usepackage{graphicx}
 \usepackage{adjustbox}
 \usepackage{xparse}
+\usepackage{xurl}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit}
+
+% 图、表、公式按章编号
+\numberwithin{figure}{chapter}
+\numberwithin{table}{chapter}
+\numberwithin{equation}{chapter}
+
+% ==============================
+% 全局表格宽度修正
+% ==============================
+
+\setlength{\tabcolsep}{3pt}
+\setlength{\emergencystretch}{3em}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
+
+% ==============================
+% 图表标题设置
+% ==============================
+
+\usepackage{caption}
+\usepackage{subcaption}
+
+% 图表标题：五号加粗效果
+% 说明：Windows 宋体真实粗体不稳定，这里用黑体五号模拟规范中的“宋体粗体五号”
+\DeclareCaptionFont{whuCaptionFont}{\heiti\zihao{5}}
+
+\captionsetup{
+  font=whuCaptionFont,
+  labelfont=whuCaptionFont,
+  textfont=whuCaptionFont,
+  labelsep=space
+}
+
+\captionsetup[figure]{
+  position=bottom,
+  skip=6pt
+}
+
+\captionsetup[table]{
+  position=top,
+  skip=6pt
+}
+
+\renewcommand{\figurename}{图}
+\renewcommand{\tablename}{表}
 
 % ==============================
 % 统一图片插入命令
@@ -80,17 +140,31 @@
     \label{#5}
   \end{figure}
 }
-\usepackage{float}
-\usepackage{booktabs}
-\usepackage{array}
-\usepackage{longtable}
-\usepackage{listings}
 
-% ==============================
-% 统一表格列类型
-% ==============================
-
-% 左对齐固定宽度列，避免窄列中文或接口路径强行两端对齐导致溢出。
+% 智能占位图：
+% 如果图片存在则插入图片；如果不存在则显示占位框。
+\newcommand{\WhuAutoFigure}[5]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{#3}{%
+      \includegraphics[width=#1,height=#2,keepaspectratio]{#3}%
+    }{%
+      \fbox{%
+        \parbox[c][#2][c]{#1}{%
+          \centering
+          \vspace{6pt}
+          {\bfseries 占位图}\\[6pt]
+          #4\\[8pt]
+          \texttt{\detokenize{#3}}\\[6pt]
+          将真实图片放到该路径并重新编译即可
+          \vspace{6pt}
+        }%
+      }%
+    }%
+    \caption{#4}
+    \label{#5}
+  \end{figure}
+}
 
 % ==============================
 % 统一字段表命令
@@ -124,10 +198,10 @@
 
 % 用于接口清单类四列表格。
 % 参数：
-% #1 第一列宽度，默认 0.14\textwidth
-% #2 第二列宽度，默认 0.13\textwidth
-% #3 第三列宽度，默认 0.33\textwidth
-% #4 第四列宽度，默认 0.30\textwidth
+% #1 第一列宽度，默认 0.13\textwidth
+% #2 第二列宽度，默认 0.12\textwidth
+% #3 第三列宽度，默认 0.31\textwidth
+% #4 第四列宽度，默认 0.28\textwidth
 % #5 表题
 % #6 表标签
 % #7 表格内容
@@ -146,47 +220,6 @@
   \endgroup
 }
 
-
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit}
-
-% 图、表、公式按章编号
-\numberwithin{figure}{chapter}
-\numberwithin{table}{chapter}
-\numberwithin{equation}{chapter}
-
-% ==============================
-% 图表标题设置
-% ==============================
-
-\usepackage{caption}
-\usepackage{subcaption}
-
-% 图表标题：宋体粗体五号
-\DeclareCaptionFont{whuCaptionFont}{\songti\bfseries\zihao{5}}
-
-\captionsetup{
-  font=whuCaptionFont,
-  labelfont=whuCaptionFont,
-  textfont=whuCaptionFont,
-  labelsep=space
-}
-
-\captionsetup[figure]{
-  position=bottom,
-  skip=6pt
-}
-
-\captionsetup[table]{
-  position=top,
-  skip=6pt
-}
-
-\renewcommand{\figurename}{图}
-\renewcommand{\tablename}{表}
-
 % ==============================
 % 代码片段样式
 % ==============================
@@ -204,7 +237,6 @@
   captionpos=b
 }
 
-
 % ==============================
 % 页眉页脚设置
 % ==============================
@@ -212,29 +244,30 @@
 \usepackage{fancyhdr}
 \setlength{\headheight}{13pt}
 
-% 正文页眉页脚
+% 页眉文字：按模板拉开字距
+\newcommand{\WhuHeaderText}{%
+  \songti\zihao{5}
+  武\hspace{0.55em}汉\hspace{0.55em}大\hspace{0.55em}学\hspace{0.55em}
+  本\hspace{0.55em}科\hspace{0.55em}毕\hspace{0.55em}业\hspace{0.55em}
+  论\hspace{0.55em}文\hspace{0.55em}（\hspace{0.55em}设\hspace{0.55em}计\hspace{0.55em}）%
+}
+
 \pagestyle{fancy}
 \fancyhf{}
-
-% 页眉：宋体五号，居中，按模板拉开字距
-\fancyhead[C]{\songti\zihao{5} 武\quad 汉\quad 大\quad 学\quad 本\quad 科\quad 毕\quad 业\quad 论\quad 文\quad （\quad 设\quad 计\quad ）}
-
-% 页脚：宋体五号，居中页码
+\fancyhead[C]{\WhuHeaderText}
 \fancyfoot[C]{\songti\zihao{5} \thepage}
 
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0pt}
 
-% 章节首页也使用同样页眉页脚
 \fancypagestyle{plain}{
   \fancyhf{}
-  \fancyhead[C]{\songti\zihao{5} 武\quad 汉\quad 大\quad 学\quad 本\quad 科\quad 毕\quad 业\quad 论\quad 文\quad （\quad 设\quad 计\quad ）}
+  \fancyhead[C]{\WhuHeaderText}
   \fancyfoot[C]{\songti\zihao{5} \thepage}
   \renewcommand{\headrulewidth}{0.4pt}
   \renewcommand{\footrulewidth}{0pt}
 }
 
-% 封面、声明页使用空白页眉页脚
 \fancypagestyle{whuempty}{
   \fancyhf{}
   \renewcommand{\headrulewidth}{0pt}
@@ -249,9 +282,9 @@
 
 \renewcommand{\contentsname}{目\quad 录}
 
-% 目录显示到三级：章、节、小节
+% 目录与正文标题编号最多到三级：章、节、小节，即 1 / 1.1 / 1.1.1
 \setcounter{tocdepth}{2}
-\setcounter{secnumdepth}{3}
+\setcounter{secnumdepth}{2}
 
 % 目录标题：黑体小二，居中
 \renewcommand{\cfttoctitlefont}{\hfill\heiti\zihao{-2}}
@@ -262,29 +295,29 @@
 % 点线密度
 \renewcommand{\cftdotsep}{0.6}
 
-% 章目录项
+% 章目录项：宋体加粗小四
 \renewcommand{\cftchapfont}{\songti\bfseries\zihao{-4}}
 \renewcommand{\cftchappagefont}{\songti\zihao{-4}}
 \renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
 \setlength{\cftbeforechapskip}{0pt}
 \setlength{\cftchapindent}{0em}
-\setlength{\cftchapnumwidth}{1.45em}
+\setlength{\cftchapnumwidth}{1.4em}
 
-% 节目录项
+% 节目录项：宋体小四
 \renewcommand{\cftsecfont}{\songti\zihao{-4}}
 \renewcommand{\cftsecpagefont}{\songti\zihao{-4}}
 \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
 \setlength{\cftbeforesecskip}{0pt}
-\setlength{\cftsecindent}{1.5em}
-\setlength{\cftsecnumwidth}{2.15em}
+\setlength{\cftsecindent}{1.6em}
+\setlength{\cftsecnumwidth}{2.3em}
 
-% 小节目录项
+% 小节目录项：宋体小四
 \renewcommand{\cftsubsecfont}{\songti\zihao{-4}}
 \renewcommand{\cftsubsecpagefont}{\songti\zihao{-4}}
 \renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
 \setlength{\cftbeforesubsecskip}{0pt}
-\setlength{\cftsubsecindent}{3.3em}
-\setlength{\cftsubsecnumwidth}{2.85em}
+\setlength{\cftsubsecindent}{3.5em}
+\setlength{\cftsubsecnumwidth}{3.2em}
 
 % ==============================
 % 章节标题设置
@@ -295,7 +328,7 @@
     name = {},
     number = \thechapter,
     format = \centering\heiti\zihao{-2},
-    aftername = \hspace{0.25em},
+    aftername = \hspace{0.4em},
     beforeskip = 0pt,
     afterskip = 24pt,
     fixskip = true
@@ -317,12 +350,9 @@
   }
 }
 
-% ==============================
-% 正文节标题编号与标题间距
-% ==============================
+% 正文节标题编号与标题间距。
 % chapter 的编号与标题间距由 chapter.aftername 控制；
 % section / subsection / subsubsection 的编号与标题间距由这里控制。
-
 \makeatletter
 \renewcommand{\@seccntformat}[1]{%
   \csname the#1\endcsname\hspace{0.35em}%
@@ -342,14 +372,22 @@
 \addbibresource{refs/references.bib}
 
 % ==============================
-% 超链接设置
+% 超链接与正文内代码样式设置
 % ==============================
 
 \usepackage[hidelinks]{hyperref}
 
+% 让 \path{} 使用正文英文字体，而不是等宽字体
+\urlstyle{same}
+\def\UrlFont{\normalfont\rmfamily}
+\DeclareUrlCommand\path{\urlstyle{same}\def\UrlFont{\normalfont\rmfamily}}
+
+% 让正文里的 \texttt{} 不再显示为突兀的等宽字体
+% 注意：lstlisting 代码块不受这个影响，代码块仍然保持等宽字体
+\DeclareTextFontCommand{\texttt}{\normalfont\rmfamily}
+
 % ==============================
 % 论文基础信息
-% 后续主要改这里
 % ==============================
 
 \newcommand{\ThesisTitleCN}{基于 HarmonyOS 系统的听障人士交互训练系统的设计与实现}
@@ -361,52 +399,9 @@
 \newcommand{\SupervisorName}{赵小刚}
 \newcommand{\SubmitDate}{二〇二六年五月}
 
-
-
-% ===== 全局表格宽度修正开始 =====
-% 缩小表格列间距，减少横向溢出
-\setlength{\tabcolsep}{3pt}
-
-% 给段落和表格提供额外伸缩空间，减少 overfull
-\setlength{\emergencystretch}{3em}
-
-% 重新定义 L/C/R 列类型：
-% \dimexpr#1-2\tabcolsep\relax 用于扣除列左右间距；
-% \hspace{0pt} 允许英文长串在窄列中自动断行。
-\newcolumntype{L}[1]{>{\raggedright\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
-\newcolumntype{C}[1]{>{\centering\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
-\newcolumntype{R}[1]{>{\raggedleft\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
-% ===== 全局表格宽度修正结束 =====
-
-
-% ===== 智能占位图开始 =====
-% 用法：
-% \WhuAutoFigure{宽度}{高度}{图片路径}{图题}{label}
-% 如果图片存在：自动插入图片；
-% 如果图片不存在：显示占位框。
-\newcommand{\WhuAutoFigure}[5]{%
-  \begin{figure}[H]
-    \centering
-    \IfFileExists{#3}{%
-      \includegraphics[width=#1,height=#2,keepaspectratio]{#3}%
-    }{%
-      \fbox{%
-        \parbox[c][#2][c]{#1}{%
-          \centering
-          \vspace{6pt}
-          {\bfseries 占位图}\\[6pt]
-          #4\\[8pt]
-          \texttt{\detokenize{#3}}\\[6pt]
-          将真实图片放到该路径并重新编译即可
-          \vspace{6pt}
-        }%
-      }%
-    }%
-    \caption{#4}
-    \label{#5}
-  \end{figure}
-}
-% ===== 智能占位图结束 =====
+% =========================================================
+% 正文开始
+% =========================================================
 
 \begin{document}
 
@@ -465,18 +460,3 @@
 \input{backmatter/appendix}
 
 \end{document}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
