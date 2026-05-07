@@ -22,11 +22,11 @@ rectangle "堆叠时序窗口\n30×166 特征样本" as stack
 rectangle "生成类别标签\n保存 feature 文件" as save
 rectangle "跳过样本\n记录失败原因" as skip
 
-raw --> scan
-scan --> check
-check --> frame : 是
-frame --> stack
-stack --> save
-check -down-> skip : 否
+raw -right-> scan
+scan -right-> check
+check -down-> frame : 是
+frame -left-> stack
+stack -left-> save
+check -right-> skip : 否
 
 @enduml

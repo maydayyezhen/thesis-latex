@@ -1,11 +1,11 @@
 digraph G {
   graph [
-    rankdir=LR,
+    rankdir=TB,
     splines=ortho,
-    nodesep=0.45,
-    ranksep=0.55,
-    pad=0.18,
-    dpi=220,
+    nodesep=0.38,
+    ranksep=0.45,
+    pad=0.12,
+    dpi=280,
     bgcolor="white"
   ];
 
@@ -15,8 +15,8 @@ digraph G {
     color="black",
     penwidth=1.2,
     fontname="Microsoft YaHei",
-    fontsize=13,
-    margin="0.20,0.12"
+    fontsize=16,
+    margin="0.18,0.12"
   ];
 
   edge [
@@ -31,25 +31,38 @@ digraph G {
     label="样本清单\n视频路径 / Gloss 标签"
   ];
 
+  decode [
+    label="视频读取与解码\nOpenCV 帧序列"
+  ];
+
   detect [
-    label="视频帧解码\nHolistic 关键点检测"
+    label="关键点检测\nHolistic 结果"
   ];
 
   window [
-    label="动作窗口定位\nhand_flags + 阈值判断"
+    label="动作窗口定位\nhand_flags + padding"
   ];
 
   sample [
-    label="重采样 20 帧"
+    label="重采样 20 帧\n统一时间长度"
   ];
 
   feature [
-    label="构造 232 维\nplus 特征"
+    label="构造 plus 特征\n20 × 232"
   ];
 
   dataset [
-    label="输出数据集文件\nX.npy / y.npy\nlabels.json / sample_index.csv\nconfig.json"
+    label="输出数据集\nX.npy / y.npy\nlabels.json / sample_index.csv"
   ];
 
-  list -> detect -> window -> sample -> feature -> dataset;
+  { rank=same; list; decode; detect; }
+  { rank=same; feature; sample; window; }
+
+  list -> decode -> detect;
+  detect -> window;
+
+  feature -> sample -> window [style=invis, weight=100];
+  window -> sample [constraint=false];
+  sample -> feature [constraint=false];
+  feature -> dataset;
 }

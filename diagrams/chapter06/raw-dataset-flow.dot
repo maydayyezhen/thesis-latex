@@ -1,0 +1,79 @@
+digraph G {
+  graph [
+    rankdir=TB,
+    splines=ortho,
+    nodesep=0.38,
+    ranksep=0.45,
+    pad=0.12,
+    dpi=280,
+    bgcolor="white"
+  ];
+
+  node [
+    shape=box,
+    style="rounded",
+    color="black",
+    penwidth=1.2,
+    fontname="Microsoft YaHei",
+    fontsize=16,
+    margin="0.18,0.12"
+  ];
+
+  edge [
+    color="black",
+    arrowsize=0.75,
+    penwidth=1.1,
+    fontname="Microsoft YaHei",
+    fontsize=12
+  ];
+
+  label_select [
+    label="确定手势标签\n移动端进入采集"
+  ];
+
+  start [
+    label="建立 WebSocket\n发送 start_dataset"
+  ];
+
+  ready [
+    label="初始化采集缓存\n返回 ready 状态"
+  ];
+
+  receive [
+    label="接收图像帧\n按时间间隔过滤"
+  ];
+
+  detect [
+    label="OpenCV 解码\nMediaPipe 检测"
+  ];
+
+  raw_frame [
+    label="构造 raw frame\n追加有效帧"
+  ];
+
+  pending [
+    label="达到窗口长度\n生成待确认样本"
+  ];
+
+  confirm [
+    label="前端确认\n保存或丢弃"
+  ];
+
+  save [
+    label="写入 raw dataset\n<label>/sample_XXX.npz"
+  ];
+
+  { rank=same; label_select; start; ready; }
+  { rank=same; raw_frame; detect; receive; }
+  { rank=same; pending; confirm; save; }
+
+  label_select -> start -> ready;
+  ready -> receive;
+
+  raw_frame -> detect -> receive [style=invis, weight=100];
+  receive -> detect [constraint=false];
+  detect -> raw_frame [constraint=false];
+
+  raw_frame -> pending;
+  pending -> confirm -> save;
+}
