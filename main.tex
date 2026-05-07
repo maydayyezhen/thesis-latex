@@ -48,6 +48,7 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{longtable}
+\usepackage{needspace}
 \usepackage{listings}
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -65,10 +66,17 @@
 
 \setlength{\tabcolsep}{3pt}
 \setlength{\emergencystretch}{3em}
+\setlength{\LTpre}{6pt}
+\setlength{\LTpost}{6pt}
 
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
 \newcolumntype{C}[1]{>{\centering\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
 \newcolumntype{R}[1]{>{\raggedleft\arraybackslash\hspace{0pt}}p{\dimexpr#1-2\tabcolsep\relax}}
+
+% 避免表题、表头或首行内容在页底被孤立拆开。
+\newcommand{\WhuTableNeedspace}{\par\Needspace{12\baselineskip}}
+\AddToHook{env/table/before}{\WhuTableNeedspace}
+\AddToHook{env/longtable/before}{\WhuTableNeedspace}
 
 % ==============================
 % 图表标题设置
