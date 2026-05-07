@@ -1,0 +1,55 @@
+% !TEX root = ../../../main.tex
+
+\section{测试环境}
+
+为验证 HearBridge 系统在真实项目环境下的功能正确性、接口联动能力与运行稳定性，
+本文按照实际工程仓库搭建测试环境。
+
+HearBridge 系统由 HarmonyOS 移动端、Spring Boot 后端、Vue 管理端和 Python 手势识别服务共同构成。
+
+其中，
+移动端负责用户训练、相机采集、实时识别和句子视频上传；
+后端负责用户认证、管理端业务、文件资源、样本管理、训练管理、模型版本发布和 Python 服务调用；
+管理端负责手势分类、手势资源、样本、训练任务和模型版本管理；
+Python 识别服务负责关键点提取、raw dataset 采集、特征转换、模型训练、模型重载、实时单词识别和句子视频识别。
+
+本次测试环境运行于 Windows 11 主机，
+基础开发工具包括 Git、PowerShell、IntelliJ IDEA、DevEco Studio、Maven Wrapper、Node.js、pnpm、Python、MySQL、MinIO、Swagger/OpenAPI 和 JMeter。
+
+后端项目基于 Java 17 与 Spring Boot 4.0.5 开发，
+测试主机实际安装 OpenJDK 21.0.11，
+并通过 Maven Wrapper 执行构建与测试。
+
+管理端采用 Vue 3 技术栈，
+移动端基于 HarmonyOS SDK 6.0.2(22) 与 ArkTS 开发，
+Python 识别服务运行于 Python 3.11.9 环境。
+
+表~\ref{tab:chapter07-test-environment} 给出了系统测试所使用的主要环境与工具。
+
+\begin{longtable}{L{0.18\textwidth} L{0.45\textwidth} L{0.29\textwidth}}
+  \caption{系统测试环境表}
+  \label{tab:chapter07-test-environment}\\
+  \toprule
+  测试对象 & 实际项目环境或工具 & 主要测试内容 \\
+  \midrule
+  基础运行环境 & Windows 11、PowerShell 5.1、Git 2.53.0、IntelliJ IDEA 2025.3.4、DevEco Studio 6.0.2.642 & 项目构建、代码调试、测试运行和截图取证 \\
+  HarmonyOS 移动端 & HarmonyOS SDK 6.0.2(22)、ArkTS、Hvigor、phone 设备类型、DevEco Studio & 移动端登录、训练流程、相机采集、实时识别、句子视频上传识别和结果展示 \\
+  Spring Boot 后端 & Java 17、Spring Boot 4.0.5、MyBatis 4.0.0、MySQL 8.0.45、Redis、MinIO、Springdoc OpenAPI 3.0.3 & 用户认证、后台管理、手势资源、样本管理、训练管理、模型发布、接口文档和 Python 服务调用 \\
+  Vue 管理端 & Vue 3.5.30、Element Plus 2.13.5、Vite 8.0.0、TypeScript 5.9.3、Pinia 3.0.4、Vue Router 5.0.3、Axios 1.13.6、ECharts 6.0.0 & 管理员登录、路由守卫、手势分类、手势资源、样本管理、训练管理和模型版本管理 \\
+  Python 识别服务 & Python 3.11.9、FastAPI、Uvicorn 0.44.0、MediaPipe 0.10.21、TensorFlow 2.15.1、OpenCV 4.11.0.86、NumPy 1.26.4 & WebSocket 实时识别、raw 样本采集、特征转换、模型训练、模型重载和句子视频识别 \\
+  数据库与缓存 & MySQL 8.0.45、Redis 本地缓存服务 & 业务数据持久化、登录 token 保存、管理端与移动端状态校验 \\
+  对象存储 & MinIO 对象存储服务、MinIO Client & 课程资源、手势资源、样本文件、训练产物和模型文件访问测试 \\
+  接口测试工具 & Swagger/OpenAPI、浏览器开发者工具 & 接口文档查看、请求参数验证、响应结构检查和前后端联调 \\
+  自动化测试工具 & JUnit 5、Mockito、Spring Boot Test、IntelliJ IDEA Coverage & 后端 Controller、Service、Interceptor 自动化测试与覆盖率统计 \\
+  性能测试工具 & Apache JMeter 5.6.3 & 核心接口并发访问、响应时间和吞吐量测试 \\
+  \bottomrule
+\end{longtable}
+
+本章测试内容分为白盒单元测试、黑盒功能测试和非功能性需求测试三类。
+
+其中，
+白盒测试以 Spring Boot 后端中已经编写的 Controller 层、Service 层和 Interceptor 层自动化测试为主；
+黑盒功能测试从移动端用户操作和管理端管理员操作角度验证系统功能是否满足需求；
+非功能性需求测试则围绕性能、稳定性、安全性、易用性和可维护性等方面展开。
+
+后续各节将分别对上述测试内容进行说明。

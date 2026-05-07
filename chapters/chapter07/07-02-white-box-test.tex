@@ -1,0 +1,163 @@
+% !TEX root = ../../../main.tex
+
+\section{白盒单元测试}
+
+\subsection{白盒单元测试设计}
+
+白盒单元测试主要面向 HearBridge 后端项目展开。
+
+后端是移动端、管理端和 Python 识别服务之间的业务协调中心，
+其内部逻辑直接影响用户登录状态、资源管理、样本管理、训练任务、模型发布和识别结果返回等关键流程。
+
+因此，
+本文将白盒测试重点放在后端 Controller 层、Service 层和 Interceptor 层，
+通过自动化测试检查接口入口、参数校验、业务状态判断、异常分支处理、认证拦截和外部依赖调用是否符合预期。
+
+当前后端测试代码位于 \texttt{src/test/java/com/yezhen/hearbridge/backend} 目录下，
+按照 \texttt{controller}、\texttt{service}、\texttt{interceptor} 等目录组织。
+
+测试工程共包含 22 个 Java 测试类，
+其中 Controller 测试类 10 个，
+Service 测试类 10 个，
+Interceptor 测试类 1 个，
+Spring Boot 应用上下文测试类 1 个。
+
+Controller 层测试主要用于验证接口入口层的请求参数接收、服务调用和响应封装；
+Service 层测试主要用于验证核心业务逻辑、状态流转和异常处理；
+Interceptor 层测试主要用于验证统一认证拦截、公开接口放行、App 端接口鉴权、管理端接口鉴权和 401 响应写出等安全相关逻辑。
+
+测试实现主要基于 JUnit 5、Mockito 和 Spring Boot Test。
+
+对于 Service 层和 Interceptor 层测试，
+系统使用 Mockito 模拟 Mapper、Redis、MinIO、Python 服务客户端或请求响应对象，
+避免测试结果受到真实数据库、缓存、文件存储和外部服务运行状态影响。
+
+对于 Controller 层测试，
+系统通过 MockMvc 模拟 HTTP 请求，
+并检查接口调用后的状态码、响应字段和异常返回结构是否符合系统约定。
+
+覆盖率统计采用 IntelliJ IDEA 自带 Coverage 分析工具完成，
+不额外引入 JaCoCo 覆盖率插件。
+
+从实际测试文件来看，
+Controller 层测试覆盖了管理端认证、文件上传、手势分类、手势资源、手势样本、样本训练、手势搜索、模型版本、模型产物文件和句子视频语义修正等接口入口；
+Service 层测试覆盖了管理端认证、移动端认证、手势分类、手势资源、样本管理、样本文件流转、模型版本管理、模型发布、句子视频语义修正和相关业务异常处理；
+Interceptor 层测试覆盖了系统统一鉴权逻辑。
+
+测试对象与当前 HearBridge 的后台管理闭环、移动端认证链路和句子视频识别语义修正链路保持一致，
+能够较好支撑系统关键后端逻辑的正确性验证。
+
+表~\ref{tab:chapter07-white-box-design} 给出了白盒单元测试的主要设计内容。
+
+\begin{longtable}{L{0.20\textwidth} L{0.38\textwidth} L{0.34\textwidth}}
+  \caption{白盒单元测试设计表}
+  \label{tab:chapter07-white-box-design}\\
+  \toprule
+  测试层次 & 实际测试对象 & 测试重点 \\
+  \midrule
+  Controller 层 & 管理端认证、文件上传、手势分类、手势资源、手势样本、样本训练、模型版本、模型文件、手势搜索、语义修正等控制器测试 & 验证接口入口参数、服务调用、响应结构和异常返回是否符合接口约定 \\
+  Service 层 & 管理端认证、移动端认证、手势分类、手势资源、样本管理、样本文件流转、模型版本管理、模型发布、语义修正等服务测试 & 验证业务状态判断、数据组装、异常分支、外部依赖调用和结果封装逻辑 \\
+  Interceptor 层 & \texttt{AuthInterceptorTest} & 验证公开接口放行、App 接口鉴权、管理端接口鉴权、token 解析和 401 响应写出逻辑 \\
+  应用上下文 & Spring Boot 应用上下文测试 & 验证后端应用基础上下文能够正常加载 \\
+  \bottomrule
+\end{longtable}
+
+测试用例设计遵循正常流程与异常流程并重的原则。
+
+正常流程用于验证管理员登录、用户登录、分类维护、资源维护、样本管理、模型发布、语义修正等主路径能够正确执行；
+异常流程用于验证密码错误、资源不存在、参数缺失、状态不匹配、重复操作、token 缺失、token 无效、外部服务响应异常等情况下系统能否返回合理错误信息。
+
+通过这种方式，
+白盒测试不仅检查功能能否执行，
+也检查异常情况下是否能够被正确拦截和反馈。
+
+\subsection{白盒单元测试结果}
+
+在完成白盒测试设计后，
+本文对 HearBridge 后端项目执行自动化单元测试。
+
+测试入口集中在 Maven 项目的 \texttt{src/test/java} 目录下，
+测试执行与覆盖率统计主要通过 IntelliJ IDEA 自带的测试运行器和 Coverage 分析功能完成，
+用于查看测试通过情况以及 Controller、Service、Interceptor 等后端代码包的覆盖情况。
+
+图~\ref{fig:chapter07-white-box-test-success} 展示了后端白盒单元测试全部通过的运行结果。
+
+\WhuAutoFigure{0.86\textwidth}{0.45\textheight}{figures/chapter07/white-box-test-success.png}{后端白盒单元测试全部通过截图}{fig:chapter07-white-box-test-success}
+
+从测试执行结果来看，
+当前后端自动化测试共执行 108 个测试用例，
+全部测试均通过，
+测试总耗时约 6.771 秒。
+
+测试范围覆盖了管理端认证、文件上传、手势分类、手势资源、手势样本、样本训练、手势搜索、模型版本管理、模型产物发布、移动端用户认证、统一认证拦截以及句子视频语义修正等核心模块。
+
+表~\ref{tab:chapter07-white-box-result} 给出了白盒单元测试执行结果统计。
+
+\begin{longtable}{L{0.26\textwidth} R{0.18\textwidth} L{0.46\textwidth}}
+  \caption{白盒单元测试执行结果统计表}
+  \label{tab:chapter07-white-box-result}\\
+  \toprule
+  统计项 & 测试结果 & 说明 \\
+  \midrule
+  Java 测试类数量 & 22 个 & 包含 Controller、Service、Interceptor 和应用上下文测试 \\
+  自动化测试用例数 & 108 个 & IDEA 测试运行器统计结果 \\
+  测试通过数量 & 108 个 & 所有测试均执行通过 \\
+  测试失败数量 & 0 个 & 未出现断言失败或运行异常 \\
+  测试总耗时 & 约 6.771 秒 & 本地开发环境运行结果 \\
+  主要测试范围 & Controller 层、Service 层、Interceptor 层 & 覆盖接口入口、核心业务逻辑与认证拦截逻辑 \\
+  \bottomrule
+\end{longtable}
+
+图~\ref{fig:chapter07-white-box-coverage} 展示了 IntelliJ IDEA Coverage 对后端 Java 代码的覆盖率统计结果。
+
+\WhuAutoFigure{0.88\textwidth}{0.48\textheight}{figures/chapter07/white-box-coverage.png}{后端白盒单元测试覆盖率截图}{fig:chapter07-white-box-coverage}
+
+表~\ref{tab:chapter07-backend-coverage} 给出了后端代码覆盖率统计结果。
+
+\begin{longtable}{L{0.24\textwidth} R{0.18\textwidth} R{0.18\textwidth} R{0.20\textwidth} R{0.18\textwidth}}
+  \caption{后端代码覆盖率统计表}
+  \label{tab:chapter07-backend-coverage}\\
+  \toprule
+  代码范围 & 类覆盖率 & 方法覆盖率 & 行覆盖率 & 分支覆盖率 \\
+  \midrule
+  项目总体 & 58\%（41/70） & 69\%（189/272） & 58\%（1058/1806） & 36\%（351/963） \\
+  \texttt{controller} 包 & 100\%（13/13） & 75\%（43/57） & 67\%（73/108） & 25\%（3/12） \\
+  \texttt{service} 包 & 88\%（16/18） & 69\%（116/167） & 60\%（835/1377） & 43\%（304/691） \\
+  \texttt{interceptor} 包 & 100\%（2/2） & 100\%（10/10） & 92\%（98/106） & 66\%（32/48） \\
+  \texttt{config} 包 & 75\%（6/8） & 76\%（10/13） & 48\%（36/74） & 26\%（10/38） \\
+  \texttt{util} 包 & 0\%（0/2） & 0\%（0/14） & 0\%（0/124） & 0\%（0/170） \\
+  \bottomrule
+\end{longtable}
+
+从覆盖率结果可以看出，
+当前白盒测试已经覆盖后端的主要业务层和接口入口层。
+
+其中，
+Controller 包类覆盖率达到 100\%，
+说明当前后端主要接口入口均已纳入自动化测试范围；
+Service 包行覆盖率达到 60\%，
+覆盖了手势资源管理、样本管理、训练管理、模型版本发布、移动端认证和语义修正等核心业务逻辑；
+Interceptor 包行覆盖率达到 92\%，
+能够较好支撑系统认证拦截与权限校验相关测试说明。
+
+同时，
+覆盖率结果也反映出当前测试仍存在一定改进空间。
+
+项目总体分支覆盖率为 36\%，
+主要原因是部分异常分支、配置分支、工具类分支和外部服务调用失败场景尚未完全覆盖；
+\texttt{util} 包当前覆盖率为 0\%，
+说明版本号处理、路径处理或通用工具方法等辅助逻辑尚未纳入单元测试。
+
+由于该类代码不直接构成主要业务流程，
+当前阶段对系统核心功能验证影响较小，
+但后续可补充工具类边界测试和异常路径测试， 
+以进一步提升整体覆盖率。
+
+总体来看，
+HearBridge 后端白盒测试已经覆盖系统核心业务链路，
+尤其是后台管理、模型发布、移动端认证、统一认证拦截和语义修正等关键模块。
+
+测试结果能够支撑毕业设计阶段对系统正确性和可靠性的验证要求。
+
+后续若继续完善，
+可优先补充工具类、配置类和外部服务异常分支相关测试。
