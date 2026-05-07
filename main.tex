@@ -164,14 +164,14 @@
 \usepackage{caption}
 \usepackage{subcaption}
 
-\DeclareCaptionFont{whuCaptionFont}{\songti\zihao{5}}
-\DeclareCaptionLabelSeparator{whuSpace}{\quad}
+% 图表标题：宋体粗体五号
+\DeclareCaptionFont{whuCaptionFont}{\songti\bfseries\zihao{5}}
 
 \captionsetup{
   font=whuCaptionFont,
-  labelfont=normalfont,
-  textfont=normalfont,
-  labelsep=whuSpace
+  labelfont=whuCaptionFont,
+  textfont=whuCaptionFont,
+  labelsep=space
 }
 
 \captionsetup[figure]{
@@ -212,31 +212,79 @@
 \usepackage{fancyhdr}
 \setlength{\headheight}{13pt}
 
+% 正文页眉页脚
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[C]{\songti\zihao{5} 武汉大学本科毕业论文（设计）}
-\fancyfoot[C]{\songti\zihao{5} \thepage}
-\renewcommand{\headrulewidth}{0.4pt}
 
+% 页眉：宋体五号，居中，按模板拉开字距
+\fancyhead[C]{\songti\zihao{5} 武\quad 汉\quad 大\quad 学\quad 本\quad 科\quad 毕\quad 业\quad 论\quad 文\quad （\quad 设\quad 计\quad ）}
+
+% 页脚：宋体五号，居中页码
+\fancyfoot[C]{\songti\zihao{5} \thepage}
+
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% 章节首页也使用同样页眉页脚
 \fancypagestyle{plain}{
   \fancyhf{}
-  \fancyhead[C]{\songti\zihao{5} 武汉大学本科毕业论文（设计）}
+  \fancyhead[C]{\songti\zihao{5} 武\quad 汉\quad 大\quad 学\quad 本\quad 科\quad 毕\quad 业\quad 论\quad 文\quad （\quad 设\quad 计\quad ）}
   \fancyfoot[C]{\songti\zihao{5} \thepage}
   \renewcommand{\headrulewidth}{0.4pt}
+  \renewcommand{\footrulewidth}{0pt}
 }
 
+% 封面、声明页使用空白页眉页脚
 \fancypagestyle{whuempty}{
   \fancyhf{}
   \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\footrulewidth}{0pt}
 }
 
 % ==============================
 % 目录设置
 % ==============================
 
+\usepackage{tocloft}
+
 \renewcommand{\contentsname}{目\quad 录}
+
+% 目录显示到三级：章、节、小节
 \setcounter{tocdepth}{2}
 \setcounter{secnumdepth}{3}
+
+% 目录标题：黑体小二，居中
+\renewcommand{\cfttoctitlefont}{\hfill\heiti\zihao{-2}}
+\renewcommand{\cftaftertoctitle}{\hfill}
+\setlength{\cftbeforetoctitleskip}{0pt}
+\setlength{\cftaftertoctitleskip}{24pt}
+
+% 点线密度
+\renewcommand{\cftdotsep}{0.6}
+
+% 章目录项
+\renewcommand{\cftchapfont}{\songti\bfseries\zihao{-4}}
+\renewcommand{\cftchappagefont}{\songti\zihao{-4}}
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\setlength{\cftbeforechapskip}{0pt}
+\setlength{\cftchapindent}{0em}
+\setlength{\cftchapnumwidth}{1.45em}
+
+% 节目录项
+\renewcommand{\cftsecfont}{\songti\zihao{-4}}
+\renewcommand{\cftsecpagefont}{\songti\zihao{-4}}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\setlength{\cftbeforesecskip}{0pt}
+\setlength{\cftsecindent}{1.5em}
+\setlength{\cftsecnumwidth}{2.15em}
+
+% 小节目录项
+\renewcommand{\cftsubsecfont}{\songti\zihao{-4}}
+\renewcommand{\cftsubsecpagefont}{\songti\zihao{-4}}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
+\setlength{\cftbeforesubsecskip}{0pt}
+\setlength{\cftsubsecindent}{3.3em}
+\setlength{\cftsubsecnumwidth}{2.85em}
 
 % ==============================
 % 章节标题设置
@@ -247,7 +295,7 @@
     name = {},
     number = \thechapter,
     format = \centering\heiti\zihao{-2},
-    aftername = \quad,
+    aftername = \hspace{0.25em},
     beforeskip = 0pt,
     afterskip = 24pt,
     fixskip = true
@@ -268,6 +316,18 @@
     afterskip = 6pt
   }
 }
+
+% ==============================
+% 正文节标题编号与标题间距
+% ==============================
+% chapter 的编号与标题间距由 chapter.aftername 控制；
+% section / subsection / subsubsection 的编号与标题间距由这里控制。
+
+\makeatletter
+\renewcommand{\@seccntformat}[1]{%
+  \csname the#1\endcsname\hspace{0.35em}%
+}
+\makeatother
 
 % ==============================
 % 参考文献设置
@@ -292,13 +352,13 @@
 % 后续主要改这里
 % ==============================
 
-\newcommand{\ThesisTitleCN}{听桥：面向听障交流与训练的多端协同系统设计与实现}
-\newcommand{\ThesisTitleEN}{HearBridge: Design and Implementation of a Multi-end Collaborative System for Hearing-impaired Communication and Training}
-\newcommand{\AuthorName}{待填写}
-\newcommand{\StudentID}{待填写}
-\newcommand{\MajorName}{软件工程}
+\newcommand{\ThesisTitleCN}{基于 HarmonyOS 系统的听障人士交互训练系统的设计与实现}
+\newcommand{\ThesisTitleEN}{Design and Implementation of an Interactive Training System for Hearing-impaired People Based on HarmonyOS}
+\newcommand{\AuthorName}{张子豪}
+\newcommand{\StudentID}{2022302111079}
+\newcommand{\MajorName}{计算机科学与技术}
 \newcommand{\CollegeName}{计算机学院}
-\newcommand{\SupervisorName}{待填写}
+\newcommand{\SupervisorName}{赵小刚}
 \newcommand{\SubmitDate}{二〇二六年五月}
 
 

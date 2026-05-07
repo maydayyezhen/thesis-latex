@@ -1,32 +1,57 @@
 ﻿% !TEX root = ../main.tex
+
 \begin{titlepage}
 \thispagestyle{whuempty}
-\centering
 
-\vspace*{1.0cm}
-
-{\songti\zihao{3} 武汉大学本科毕业论文（设计）\par}
-
-\vspace{2.2cm}
-
-{\kaishu\zihao{1} \ThesisTitleCN\par}
-
-\vspace{2.0cm}
-
-{\songti\zihao{4}
-\renewcommand{\arraystretch}{1.6}
-\begin{tabular}{rl}
-姓\qquad 名： & \AuthorName \\
-学\qquad 号： & \StudentID \\
-专\qquad 业： & \MajorName \\
-学\qquad 院： & \CollegeName \\
-指导教师： & \SupervisorName \\
-\end{tabular}
+\newgeometry{
+  left=0mm,
+  right=0mm,
+  top=0mm,
+  bottom=0mm
 }
 
-\vfill
+\begin{tikzpicture}[remember picture, overlay]
 
-{\songti\zihao{4} \SubmitDate\par}
+% 武汉大学书法字：参考 PDF 顶部约 51mm
+\node[anchor=north] at ([yshift=-50.8mm]current page.north) {
+  \includegraphics[width=50mm]{figures/whu-title.png}
+};
 
+% 本科毕业论文（设计）：参考 PDF 顶部约 79mm
+\node[anchor=north] at ([yshift=-79.4mm]current page.north) {
+  {\songti\zihao{-2} 本科毕业论文（设计）}
+};
+
+% 论文题目：参考 PDF 顶部约 119mm
+\node[anchor=north] at ([yshift=-119.4mm]current page.north) {
+  {\kaishu\zihao{1}
+  \begin{tabular}{c}
+  基于 HarmonyOS 系统的听障人士\\[0.50em]
+  交互训练系统的设计与实现
+  \end{tabular}
+  }
+};
+
+% 信息表：参考 PDF 第一行约 168mm
+\node[anchor=north] at ([xshift=0mm,yshift=-167.8mm]current page.north) {
+  {\songti\zihao{4}
+  \renewcommand{\arraystretch}{1.62}
+  \begin{tabular}{r@{\hspace{4.2em}}l}
+  姓\quad 名： & \AuthorName \\
+  学\quad 号： & \StudentID \\
+  专\quad 业： & \MajorName \\
+  学\quad 院： & \CollegeName \\
+  指导教师： & \SupervisorName \\
+  \end{tabular}
+  }
+};
+
+% 日期：参考 PDF 顶部约 261mm
+\node[anchor=north] at ([yshift=-261.4mm]current page.north) {
+  {\songti\zihao{4} \SubmitDate}
+};
+
+\end{tikzpicture}
+
+\restoregeometry
 \end{titlepage}
-
