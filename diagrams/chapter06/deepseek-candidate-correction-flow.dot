@@ -1,0 +1,96 @@
+digraph DeepSeekCandidateCorrection {
+    rankdir=TB;
+
+    graph [
+        dpi=200,
+        bgcolor="white",
+        pad="0.25",
+        ranksep="0.55",
+        nodesep="0.35"
+    ];
+
+    node [
+        shape=box,
+        style="rounded,filled",
+        fillcolor="#F7FAFF",
+        color="#4A6FA5",
+        fontname="Microsoft YaHei",
+        fontsize=11
+    ];
+
+    edge [
+        color="#4A6FA5",
+        penwidth=1.2,
+        arrowsize=0.8,
+        fontname="Microsoft YaHei",
+        fontsize=10
+    ];
+
+    python [
+        label="Python 句子视频识别服务\n输出 rawSequence、rawTextZh、segmentTopK",
+        fillcolor="#EAF2FF"
+    ];
+
+    backend_map [
+        label="后端整理识别结果\n将 segmentTopK 整理为 segments\n生成逐词中文映射",
+        fillcolor="#F7FAFF"
+    ];
+
+    candidate [
+        label="候选序列生成\n保留原标签 / 删除噪声词 / 使用 Top-K 替换\n生成 candidates",
+        fillcolor="#FFF7E6"
+    ];
+
+    constraint [
+        label="候选约束\n最多 2 次编辑\n最多 1 次替换\n最多 81 个候选",
+        fillcolor="#FFF0F0"
+    ];
+
+    request [
+        label="构造 DeepSeek 请求\nrawSequence + rawTextZh + segments + candidates",
+        fillcolor="#F7FAFF"
+    ];
+
+    deepseek [
+        label="DeepSeek 语义修正\n只允许从 candidates 中选择一个 candidateId\n生成英文与中文自然表达",
+        fillcolor="#E8FFF1"
+    ];
+
+    validate [
+        label="后端校验返回结果\n检查 selectedCandidateId 是否存在\n不直接信任自由生成序列",
+        fillcolor="#FFF7E6"
+    ];
+
+    success [
+        label="候选编号有效\n以程序候选序列为准\n生成 correctedGlossSequence / correctedTextZh",
+        fillcolor="#E8FFF1"
+    ];
+
+    fallback [
+        label="调用失败或候选编号无效\n进入 fallback\n保留 rawSequence / rawTextZh",
+        fillcolor="#FFEFEF"
+    ];
+
+    output [
+        label="返回前端展示结果\n原始识别结果 + 修正后文本 + 置信信息 + 词段说明",
+        fillcolor="#EAF2FF"
+    ];
+
+    python -> backend_map;
+    backend_map -> candidate;
+    candidate -> constraint;
+    constraint -> request;
+    request -> deepseek;
+    deepseek -> validate;
+
+    validate -> success [
+        label="校验通过"
+    ];
+
+    validate -> fallback [
+        label="异常或无效"
+    ];
+
+    success -> output;
+    fallback -> output;
+}

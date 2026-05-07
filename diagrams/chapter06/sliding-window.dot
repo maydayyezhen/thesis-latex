@@ -1,84 +1,41 @@
-digraph G {
-  graph [
-    rankdir=TB,
-    splines=ortho,
-    nodesep=0.40,
-    ranksep=0.48,
-    pad=0.18,
-    dpi=220,
-    bgcolor="white",
-    newrank="true"
-  ];
+digraph SlidingWindow {
+    rankdir=LR;
+    graph [dpi=200, bgcolor="white", pad="0.2"];
+    node [shape=box, style="rounded,filled", fillcolor="#F7FAFF", color="#4A6FA5", fontname="Microsoft YaHei", fontsize=11];
+    edge [color="#4A6FA5", penwidth=1.2, arrowsize=0.8];
 
-  node [
-    shape=box,
-    style="rounded",
-    color="black",
-    penwidth=1.2,
-    fontname="Microsoft YaHei",
-    fontsize=13,
-    margin="0.18,0.10"
-  ];
+    input [label="句子视频帧序列\nFrame 0 ... Frame n-1", fillcolor="#EAF2FF"];
 
-  edge [
-    color="black",
-    arrowsize=0.75,
-    penwidth=1.1,
-    fontname="Microsoft YaHei",
-    fontsize=11
-  ];
+    win1 [label="窗口 1\n起点 0\n长度 20 帧"];
+    win2 [label="窗口 2\n起点 2\n长度 20 帧"];
+    win3 [label="窗口 3\n起点 4\n长度 20 帧"];
+    more [label="...\n按步长继续滑动", fillcolor="#FFF7E6"];
+    last [label="末尾补充窗口\n覆盖视频尾部", fillcolor="#FFEFEF"];
 
-  seq [
-    label="帧级检测结果序列\n0, 1, 2, ..., total_frames-1"
-  ];
+    feat1 [label="20 × 232\n窗口特征矩阵"];
+    feat2 [label="20 × 232\n窗口特征矩阵"];
+    feat3 [label="20 × 232\n窗口特征矩阵"];
+    featL [label="20 × 232\n窗口特征矩阵"];
 
-  note [
-    label="窗口长度 = 20\n步长 = 2"
-  ];
+    batch [label="批量推理输入\nNw × 20 × 232", fillcolor="#E8FFF1"];
+    model [label="词级分类模型\n批量推理", fillcolor="#E8FFF1"];
+    result [label="逐窗口预测结果\n词段合并与过滤", fillcolor="#E8FFF1"];
 
-  w1 [
-    label="窗口 1\nstart = 0\nend = 19"
-  ];
+    input -> win1;
+    input -> win2;
+    input -> win3;
+    input -> more;
+    input -> last;
 
-  w2 [
-    label="窗口 2\nstart = 2\nend = 21"
-  ];
+    win1 -> feat1;
+    win2 -> feat2;
+    win3 -> feat3;
+    last -> featL;
 
-  w3 [
-    label="窗口 3\nstart = 4\nend = 23"
-  ];
+    feat1 -> batch;
+    feat2 -> batch;
+    feat3 -> batch;
+    featL -> batch;
 
-  wdots [
-    label="..."
-  ];
-
-  wlast [
-    label="最后窗口\nstart = last_start\nend = last_start + 19"
-  ];
-
-  feature [
-    label="逐窗口构造特征\n每个窗口 → 20×232"
-  ];
-
-  batch [
-    label="批量推理输入\nX ∈ R^{window_count×20×232}"
-  ];
-
-  seq -> note;
-
-  note -> w1;
-  note -> w2;
-  note -> w3;
-  note -> wdots;
-  note -> wlast;
-
-  { rank=same; w1; w2; w3; wdots; wlast; }
-
-  w1 -> feature;
-  w2 -> feature;
-  w3 -> feature;
-  wdots -> feature;
-  wlast -> feature;
-
-  feature -> batch;
+    batch -> model -> result;
 }

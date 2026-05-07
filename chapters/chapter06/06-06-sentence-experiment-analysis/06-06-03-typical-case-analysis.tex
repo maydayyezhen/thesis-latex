@@ -2,18 +2,137 @@
 
 \subsection{典型识别样例分析}
 
+在整体统计结果之外，
+本文进一步选取若干具有代表性的拼接句子视频样例进行分析。
 
-\WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/typical-sentence-result.png}{典型句子视频识别结果展示图}{fig:chapter06-typical-sentence-result}
+需要说明的是，
+本节中的样例不用于替代前文的多随机种子平均结果，
+而仅用于展示系统在具体样例中的识别、候选生成和语义修正过程。
 
+为了避免使用表现明显偏高或偏低的单次运行结果作为案例来源，
+本文选取与整体平均表现较为接近的 seed=5 运行结果作为代表性样例来源。
 
-\begin{longtable}{L{0.15\textwidth} L{0.17\textwidth} L{0.17\textwidth} L{0.15\textwidth} L{0.17\textwidth} L{0.14\textwidth}}
+这些样例覆盖了原始识别正确、插入噪声成功删除、删除噪声但仍不完全正确、候选存在但未选中、局部替换后仍不完全正确以及低置信片段输出等情况。
+
+通过这些样例，
+可以更直观地观察系统在连续短句识别中的有效场景和主要限制。
+
+表~\ref{tab:chapter06-typical-case-analysis} 给出了部分典型测试样例。
+
+\begin{longtable}{L{0.14\textwidth} L{0.19\textwidth} L{0.28\textwidth} L{0.16\textwidth} L{0.17\textwidth}}
   \caption{典型识别样例分析表}
   \label{tab:chapter06-typical-case-analysis}\\
   \toprule
-  样例 & 期望 Gloss & 识别 Gloss & 中文直译 & 语义修正结果 & 分析说明 \\
+  样例类型 & 期望 Gloss & 原始与修正序列 & 修正后中文 & 分析说明 \\
   \midrule
-  正确识别样例 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
-  插入误报样例 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
-  局部替换样例 & 待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  原始正确并保持 & \texttt{you help} & 原始：\texttt{you help}；修正：\texttt{you help} & 你帮忙。 & 原始序列已经正确，语义修正选择原始候选，未引入额外修改 \\
+  插入噪声成功删除 & \texttt{what you want today} & 原始：\texttt{want what you want today}；修正：\texttt{what you want today} & 你今天想要什么？ & 删除句首边界插入词后，修正序列与期望序列一致 \\
+  删除后仍不完全正确 & \texttt{teacher help you go school today} & 原始：\texttt{teacher help you why school today}；修正：\texttt{teacher help you school today} & 老师今天在学校帮助你。 & 删除了明显误报的 \texttt{why}，但未恢复漏掉的 \texttt{go} \\
+  候选存在但未选中 & \texttt{go school} & 原始：\texttt{go work school}；修正：\texttt{go work school} & 去工作和上学。 & 正确序列存在于候选集合中，但原始序列在语言层面仍可解释，因此最终选择未发生变化 \\
+  局部替换仍不完全正确 & \texttt{you learn language} & 原始：\texttt{you learn school help language}；修正：\texttt{you learn school learn language} & 你在学校学语言。 & 进行了一次 Top-K 局部替换，但仍保留额外的 \texttt{school}，未完全匹配期望序列 \\
+  低置信不完整片段 & \texttt{why you sorry} & 原始：\texttt{you sorry}；修正：\texttt{you sorry} & 你，对不起…… & 原始序列缺少疑问词，语义关系不完整，因此返回片段式表达 \\
   \bottomrule
 \end{longtable}
+
+由表~\ref{tab:chapter06-typical-case-analysis} 可以看出，
+对于较短且动作边界清晰的样例，
+系统能够直接输出正确的 Gloss 序列。
+
+例如 \texttt{you help} 样例中，
+原始识别结果已经与期望序列一致，
+语义修正阶段也选择了原始候选。
+
+这说明受约束语义修正机制在该场景下不会破坏正确结果。
+
+对于存在明显边界插入词的样例，
+候选序列机制能够提供有效的删除候选。
+
+例如 \texttt{what you want today} 样例中，
+原始序列在句首多出了 \texttt{want}，
+修正后序列删除该插入词，
+最终与期望序列完全一致。
+
+这说明候选序列生成与语义修正机制对于部分插入误报具有实际修复能力。
+
+但是，
+语义修正并不能恢复所有视觉识别阶段已经丢失的信息。
+
+例如 \texttt{teacher help you go school today} 样例中，
+系统删除了明显不合理的 \texttt{why}，
+但原始序列中缺失的 \texttt{go} 并没有被恢复。
+
+这是因为后端候选生成过程受到视觉候选证据约束，
+不会凭空新增没有对应词段支持的新 Gloss。
+
+因此，
+该结果虽然在语义表达上比原始序列更自然，
+但仍未达到完全匹配。
+
+这也说明，
+在当前系统中，
+语义修正模块主要承担候选选择和自然化表达作用，
+不能替代前端视觉识别阶段的词段检测能力。
+
+此外，
+候选集合中存在正确答案并不意味着语义修正阶段一定能够选中该候选。
+
+例如 \texttt{go school} 样例中，
+正确序列可由删除 \texttt{work} 得到，
+但 \texttt{go work school} 在自然语言层面仍然可以被解释为相对连贯的表达。
+
+在这种情况下，
+语义修正模块可能选择保留原始候选。
+
+这一现象并不表示候选机制无效，
+而是说明在小词表和候选信息有限的条件下，
+候选排序阶段还需要更充分地利用视觉证据、置信度信息和词段边界信息。
+
+对于局部替换样例，
+系统可以利用同一词段的 Top-K 候选进行有限替换。
+
+例如 \texttt{you learn language} 样例中，
+修正结果将其中一个局部词段替换为 \texttt{learn}，
+使表达在语义上更接近“学习语言”。
+
+但是，
+由于原始序列中仍包含冗余的 \texttt{school}，
+最终序列仍未完全等同于期望序列。
+
+这说明 Top-K 替换能够修正部分局部错误，
+但如果同时存在插入词、漏词或多个词段混淆问题，
+单次替换并不足以保证整体序列正确。
+
+低置信或不完整片段则体现了系统对不确定结果的保守处理。
+
+例如 \texttt{why you sorry} 样例中，
+原始序列只保留了 \texttt{you sorry}，
+缺少表达疑问关系的 \texttt{why}。
+
+此时，
+系统没有强行生成完整问句，
+而是以片段形式给出中文表达。
+
+这种处理方式避免了过度补全，
+能够降低大语言模型在视觉证据不足时自由生成不可靠内容的风险。
+
+从这些样例可以看出，
+本文采用的约束式语义修正策略更强调结果的视觉忠实性和稳定性。
+
+在当前 25 类小词表和有限训练样本条件下，
+如果允许大语言模型进行更激进的自由改写，
+容易出现语义上看似自然但缺乏视频识别证据支持的结果。
+
+因此，
+系统最终采用保守的候选约束方式：
+只允许 DeepSeek 在程序生成的候选集合中选择，
+而不允许其自由新增词汇或重排词序。
+
+总体来看，
+典型样例表明，
+当前系统在短句识别、插入噪声删除和保守自然化表达方面已经具备一定效果。
+
+同时，
+系统仍然存在漏词难以恢复、局部替换不稳定以及候选排序未充分利用正确候选等问题。
+
+这些问题与整体统计结果相互印证，
+也说明后续优化应重点放在高质量训练资源扩充、词级模型区分能力提升以及候选排序策略改进上。

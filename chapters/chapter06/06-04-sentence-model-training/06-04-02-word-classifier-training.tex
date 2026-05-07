@@ -2,32 +2,34 @@
 
 \subsection{词级分类模型结构与训练策略}
 
+在获得 X.npy、y.npy 和 labels.json 后，训练脚本加载全部 $20\times232$ 特征样本。
+其中，X.npy 保存词级视频样本的时序特征矩阵，y.npy 保存对应的类别编号，labels.json 保存类别编号与 Gloss 标签之间的映射关系。
+系统根据 labels.json 中的标签数量确定模型输出层的分类类别数。
+为了保证训练集、验证集和测试集中各类别分布相对均衡，系统采用按类别分层划分策略对样本进行划分。
+这种方式可以避免部分类别只出现在训练集或测试集中，从而提高模型评估结果的可靠性。
 
 \WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/word-classifier-structure.png}{词级分类模型结构图}{fig:chapter06-word-classifier-structure}
 
+如图~\ref{fig:chapter06-word-classifier-structure} 所示，词级分类模型采用轻量级双向 GRU 时序分类结构。
+模型输入为 $20\times232$ 的 plus 特征序列，其中 20 表示重采样后的帧数，232 表示每一帧的特征维度。
+输入序列首先经过 Masking 层，用于处理可能存在的零值填充帧。
+随后，模型使用两层双向 GRU 提取时间序列中的动作变化信息。
+第一层双向 GRU 设置 96 个隐单元，并返回完整时间序列，以保留每个时间步的中间表示。
+第二层双向 GRU 设置 64 个隐单元，并输出定长向量，用于后续分类判断。
+每层 GRU 后接 Layer Normalization，以稳定中间特征分布并改善训练过程。
 
-在获得 X.npy、y.npy 和 labels.json 后，训练脚本加载全部 $20\times232$ 特征样本，并根据标签数量确定分类类别数。
-为了保证训练、验证和测试数据中各类别分布相对均衡，系统采用按类别分层划分策略，将样本划分为训练集、验证集和测试集。
+双向 GRU 结构能够同时利用动作序列的前向信息和后向信息。
+对于词级手语动作而言，某些类别可能在动作起始阶段较为相似，但在动作结束姿态或运动方向上存在差异。
+因此，双向时序建模有助于模型综合考虑完整动作片段中的前后文变化。
+与直接使用单帧特征分类相比，该结构能够更好地学习手型变化、手部运动轨迹和上肢姿态变化之间的时序关系。
+同时，相较于更复杂的视频端到端模型，基于关键点特征的双向 GRU 模型参数规模较小，更适合当前小词表实验和系统原型验证。
 
-词级分类模型采用轻量时序分类结构。
-模型输入形状为 $20\times232$，首先经过 Masking 层以处理可能存在的零值填充；
-随后使用两层双向 GRU 提取时间序列特征。
-第一层双向 GRU 设置 96 个隐单元并返回完整时间序列，第二层双向 GRU 设置 64 个隐单元并输出定长向量。
-每层 GRU 后使用 Layer Normalization 稳定特征分布。
-
-\begin{lstlisting}[style=whuCode,caption={词级分类模型结构},label={lst:chapter06-word-classifier-structure}]
-输入：20×232 时序特征
--> Masking(mask_value=0.0)
--> Bidirectional GRU(96, return_sequences=True)
--> LayerNormalization
--> Bidirectional GRU(64, return_sequences=False)
--> LayerNormalization
--> Dense(128, ReLU)
--> Dropout
--> Dense(64, ReLU)
--> Dropout
--> Dense(class_count, Softmax)
-\end{lstlisting}
+在完成 GRU 时序特征提取后，模型通过全连接层进一步压缩特征并完成类别判别。
+第一层全连接层设置 128 个神经元，并使用 ReLU 激活函数增强非线性表达能力。
+随后加入 Dropout 层，以降低小样本训练场景下的过拟合风险。
+第二层全连接层设置 64 个神经元，同样使用 ReLU 激活函数和 Dropout 正则化。
+最后，输出层的神经元数量等于当前小词表类别数，并通过 Softmax 函数输出各 Gloss 类别的概率分布。
+模型最终将概率最高的类别作为 Top-1 预测结果，同时保留 Top-3 候选结果用于后续句子识别与语义修正。
 
 \begin{longtable}{L{0.24\textwidth} L{0.24\textwidth} L{0.40\textwidth}}
   \caption{词级分类模型训练参数表}
@@ -35,14 +37,25 @@
   \toprule
   参数 & 取值 & 说明 \\
   \midrule
-  输入形状 & $20\times232$ & 单个词级样本 \\
-  模型结构 & BiGRU + Dense & 时序分类 \\
-  优化器 & Adam & 参数优化 \\
-  学习率 & 1e-3 & 初始学习率 \\
-  损失函数 & sparse categorical crossentropy & 多分类损失 \\
-  batch\_size & 8 & 小样本训练 \\
+  输入形状 & $20\times232$ & 单个词级视频样本的时序特征 \\
+  模型结构 & BiGRU + Dense & 基于关键点序列的时序分类模型 \\
+  优化器 & Adam & 用于模型参数优化 \\
+  学习率 & $1\times10^{-3}$ & 初始学习率 \\
+  损失函数 & sparse categorical crossentropy & 多分类任务损失函数 \\
+  batch\_size & 8 & 适配当前小样本训练规模 \\
   epochs & 120 & 最大训练轮数 \\
-  dropout & 0.35 & 防止过拟合 \\
-  评价指标 & accuracy / top3\_accuracy & Top-1 与 Top-3 分类效果 \\
+  dropout & 0.35 & 降低模型过拟合风险 \\
+  评价指标 & accuracy / top3\_accuracy & 评估 Top-1 与 Top-3 分类效果 \\
   \bottomrule
 \end{longtable}
+
+如表~\ref{tab:chapter06-word-model-train-params} 所示，模型训练使用 Adam 优化器和稀疏多分类交叉熵损失函数。
+由于标签数组 y.npy 中保存的是整数类别编号，因此损失函数采用 sparse categorical crossentropy，而不需要将标签额外转换为 one-hot 编码。
+训练过程中，accuracy 用于衡量模型 Top-1 预测是否正确，top3\_accuracy 用于衡量真实类别是否出现在概率最高的前三个候选类别中。
+对于后续句子视频识别任务而言，Top-3 候选结果具有重要意义。
+即使某个词级片段的 Top-1 预测不完全准确，只要真实词汇仍然位于候选集合中，后续的语义修正模块仍有机会结合上下文对结果进行调整。
+
+从整体训练策略看，词级分类模型并不直接处理原始视频像素，而是基于前一阶段构建的 $20\times232$ plus 特征进行训练。
+这种方式降低了背景、光照和服装等视觉因素对模型的干扰，使模型更加关注人体姿态、手部结构和动作变化本身。
+同时，固定长度输入、分层数据划分、Dropout 正则化和 Top-3 评价指标共同构成了当前句子视频识别实验的训练策略。
+该模型的输出结果不仅用于单个词级视频的分类评估，也为后续连续视频中的滑动窗口预测、候选 Gloss 生成和语义修正提供基础。

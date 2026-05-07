@@ -1,0 +1,55 @@
+digraph G {
+  graph [
+    rankdir=LR,
+    splines=ortho,
+    nodesep=0.45,
+    ranksep=0.55,
+    pad=0.18,
+    dpi=220,
+    bgcolor="white"
+  ];
+
+  node [
+    shape=box,
+    style="rounded",
+    color="black",
+    penwidth=1.2,
+    fontname="Microsoft YaHei",
+    fontsize=13,
+    margin="0.20,0.12"
+  ];
+
+  edge [
+    color="black",
+    arrowsize=0.75,
+    penwidth=1.1,
+    fontname="Microsoft YaHei",
+    fontsize=11
+  ];
+
+  list [
+    label="样本清单\n视频路径 / Gloss 标签"
+  ];
+
+  detect [
+    label="视频帧解码\nHolistic 关键点检测"
+  ];
+
+  window [
+    label="动作窗口定位\nhand_flags + 阈值判断"
+  ];
+
+  sample [
+    label="重采样 20 帧"
+  ];
+
+  feature [
+    label="构造 232 维\nplus 特征"
+  ];
+
+  dataset [
+    label="输出数据集文件\nX.npy / y.npy\nlabels.json / sample_index.csv\nconfig.json"
+  ];
+
+  list -> detect -> window -> sample -> feature -> dataset;
+}

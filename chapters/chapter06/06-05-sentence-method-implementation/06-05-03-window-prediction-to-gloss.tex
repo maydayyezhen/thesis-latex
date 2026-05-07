@@ -2,49 +2,184 @@
 
 \subsection{词级分类预测与 Gloss 序列生成}
 
+在生成批量推理输入张量 $X$ 后，
+系统将其整体输入已经训练完成的词级分类模型，
+得到每个滑动窗口在全部 Gloss 类别上的预测概率分布。
+
+由于 $X$ 中的每个样本都对应一个候选时间窗口，
+因此模型输出的每一行概率向量都可以通过 \texttt{window\_meta} 映射回原视频中的具体时间区间，
+包括该窗口的起始帧 \texttt{start\_frame}、结束帧 \texttt{end\_frame} 和中心帧 \texttt{center\_frame}。
+
+从工程实现上看，
+句子视频识别中的 Gloss 序列生成并不是对所有窗口预测结果直接按时间顺序拼接，
+而是要依次经过逐窗口预测组织、原始词段合并、词段过滤和词段级非极大值抑制等步骤，
+最终再从保留下来的稳定词段中提取标签序列。
 
 \WhuAutoFigure{0.82\textwidth}{0.42\textheight}{figures/chapter06/window-predict-to-gloss.png}{逐窗口预测到 Gloss 序列生成流程图}{fig:chapter06-window-predict-to-gloss}
 
+如图~\ref{fig:chapter06-window-predict-to-gloss} 所示，
+系统首先根据模型输出生成逐窗口预测表 \texttt{dense\_rows}，
+然后基于有效窗口构造原始词段 \texttt{raw\_segments}，
+再经过词段过滤和词段级 NMS 得到最终词段集合 \texttt{final\_segments}，
+最后按时间顺序提取各词段的标签，
+形成句子视频识别的原始 Gloss 序列 \texttt{rawSequence}。
 
-在生成批量推理输入 X 后，系统将其输入已经训练完成的词级分类模型，得到每个滑动窗口在 25 个 Gloss 类别上的预测概率。
-由于 X 中的每个样本都对应一个候选窗口，因此模型输出的每一行概率向量都可以通过 window\_meta 映射回原视频中的一段帧区间。
+逐窗口预测结果由 \texttt{make\_dense\_rows} 函数统一组织。
+对于第 $i$ 个候选窗口，
+系统首先对类别概率按从高到低排序，
+得到 Top-1、Top-2 和 Top-3 候选类别及其对应概率。
 
-对于第 i 个候选窗口，系统根据该窗口的概率向量按从高到低排序，取出 Top-1、Top-2 和 Top-3 候选类别及其概率。
-为了避免将低置信度或类别边界不明显的窗口直接纳入词段合并，系统会对每个窗口计算 Top-1 概率 top1\_prob 和 Top-1 与 Top-2 概率之间的差值 margin。
-只有当 top1\_prob 达到置信度阈值，并且 margin 达到类别间隔阈值时，该窗口才被标记为 accepted。
+其中，
+Top-1 类别表示该窗口当前最可能对应的 Gloss，
+Top-2 和 Top-3 则主要用于保留候选信息，
+便于后续调试分析与接口结果展示。
+
+为了避免将低置信度窗口或类别边界不明显的窗口直接纳入后续词段构造，
+系统会对每个窗口计算 Top-1 概率 \texttt{top1\_prob}，
+以及 Top-1 与 Top-2 概率之间的差值 \texttt{margin}。
+
+只有当窗口同时满足置信度阈值和类别间隔阈值时，
+该窗口才会被标记为有效窗口，
+即 \texttt{accepted=1}。
 
 \begin{equation}
-accepted = (top1\_prob \geq confidence\_threshold)\land(margin \geq margin\_threshold)
+accepted=
+\bigl(top1\_prob \geq confidence\_threshold\bigr)
+\land
+\bigl(margin \geq margin\_threshold\bigr)
 \label{eq:chapter06-window-accepted}
 \end{equation}
 
-在得到 dense\_rows 后，系统首先根据 accepted 标志筛选出有效窗口，并将相邻的同标签窗口合并为原始词段 raw\_segments。
-具体而言，如果某个窗口与当前词段的 Top-1 标签相同，并且该窗口起始帧与当前词段结束帧之间的距离不超过 same\_label\_merge\_gap，则认为它们属于同一个词级动作片段。
+经过上述处理后，
+系统得到逐窗口预测表 \texttt{dense\_rows}。
+其中每一行对应一个滑动窗口，
+记录了窗口的时间范围、中心位置、Top-1/Top-2/Top-3 预测结果以及是否被接受等信息。
 
-完成原始词段合并后，系统进一步过滤明显不可靠的片段。
-过滤规则主要包括三类：第一，blank 标签不进入最终 Gloss 序列；
-第二，窗口数量少于 min\_segment\_windows 的片段会被丢弃；
-第三，如果片段平均置信度和峰值置信度均低于设定阈值，则认为该片段整体可信度不足，也会被过滤。
+需要特别说明的是，
+后续词段构造主要依赖被接受窗口的 Top-1 标签，
+而不是直接对 Top-3 结果做投票生成最终序列。
 
-在短句视频中，由于滑动窗口之间高度重叠，不同标签的候选词段可能在时间区间上互相覆盖。
-如果仅依靠置信度过滤，仍然可能保留多个时间位置接近但标签不同的词段，最终表现为 Gloss 序列中多出无关词汇。
-因此，系统在 filtered\_segments 基础上继续执行词段级非极大值抑制（Non-Maximum Suppression，NMS），用于在时间上互相竞争的候选词段中保留更稳定的结果。
+系统随后调用 \texttt{build\_raw\_segments}，
+根据 \texttt{dense\_rows} 中所有 \texttt{accepted=1} 的窗口构造原始词段 \texttt{raw\_segments}。
 
-NMS 的第一步是合并相邻或重叠的同标签词段，避免同一个词被拆成多个连续重复片段。
-第二步是为每个候选词段计算稳定性分数。
-系统并不只使用 max\_confidence 作为排序依据，因为短暂误报也可能在某一个窗口中出现较高峰值。
-相比之下，一个更可靠的词段通常应该在多个连续窗口中保持较高概率。
+具体而言，
+系统按照时间顺序遍历有效窗口。
+如果当前窗口与正在构造的词段具有相同的 Top-1 标签，
+并且该窗口起始帧与当前词段结束帧之间的距离不超过 \texttt{same\_label\_merge\_gap}，
+则将二者合并为同一个原始词段。
+
+在合并过程中，
+系统会同步更新词段的起止帧、中心帧、窗口数量、置信度累积和最大置信度等统计信息。
+
+对于每个原始词段，
+系统还会进一步计算平均置信度 \texttt{avg\_confidence} 和最大置信度 \texttt{max\_confidence}。
+其中，
+平均置信度反映该词段在多个连续窗口上的整体稳定程度，
+最大置信度反映该词段内部最强响应窗口的概率峰值。
+
+在得到原始词段 \texttt{raw\_segments} 后，
+系统调用 \texttt{filter\_segments} 对其进行进一步筛选，
+得到过滤后的词段集合 \texttt{filtered\_segments}。
+
+该阶段的过滤规则主要包括三类。
+
+第一，
+标签为 \texttt{blank} 的词段不会进入最终 Gloss 序列。
+
+第二，
+窗口数量小于 \texttt{min\_segment\_windows} 的词段会被丢弃，
+因为这类词段持续时间过短，
+通常更可能是边界抖动或局部误报。
+
+第三，
+如果某个词段同时满足平均置信度较低且最大置信度也较低，
+则认为该片段整体可信度不足，
+同样会被过滤掉。
+
+经过上述过滤后，
+系统虽然已经去除了明显不可靠的词段，
+但在短句视频中，
+仍然可能保留多个时间位置接近、但标签不同的候选词段。
+
+这类现象的根本原因在于滑动窗口之间存在较大重叠，
+边界区域可能同时激活多个不同类别。
+如果不进一步抑制这些竞争片段，
+最终得到的 Gloss 序列中就可能出现插入误报或局部重复。
+
+为此，
+系统对 \texttt{filtered\_segments} 执行词段级非极大值抑制，
+得到最终词段集合 \texttt{final\_segments}。
+
+在当前实现中，
+该过程由 \texttt{nms\_segments} 完成。
+其目的不是在逐窗口层面删除预测，
+而是在词段层面保留更稳定、更可信的候选结果。
+
+NMS 的第一步是再次合并时间上相邻或重叠的同标签词段，
+用于消除同一个词被拆成多个连续片段的情况。
+
+NMS 的第二步是为每个候选词段计算稳定性分数，
+并按该分数从高到低排序。
+当前实现采用如下评分方式：
 
 \begin{equation}
 score = avg\_confidence \times \log(1 + window\_count)
 \label{eq:chapter06-segment-score}
 \end{equation}
 
-NMS 的第三步是判断不同词段之间是否存在竞争关系。
-系统主要从两个角度判断：一是中心帧距离，如果两个词段的 center\_frame 距离小于设定抑制半径，则认为它们可能对应同一段动作区域；
-二是时间区间重叠，如果两个词段的起止帧高度重叠，或者其中一个词段的大部分区域被另一个词段覆盖，也认为它们属于竞争候选。
-对于存在竞争关系的词段，系统按照稳定性分数只保留分数更高的片段。
+该评分方式不仅考虑平均置信度，
+还考虑该词段由多少个窗口共同支持。
+因此，
+与仅依据最大置信度排序相比，
+该评分更有利于保留持续时间更长、概率更稳定的真实词段。
 
-经过过滤与重叠抑制后，系统得到最终词段 final\_segments。
-final\_segments 按时间顺序排列，每个片段都包含 Gloss 标签、起止帧、窗口数量、平均置信度和最大置信度等信息。
-随后，系统从 final\_segments 中依次提取 label 字段，形成 rawSequence，也就是句子视频识别的 Gloss 序列输出。
+NMS 的第三步是判断不同词段之间是否存在竞争关系。
+当前实现主要从两个角度进行判断。
+
+其一是中心帧距离。
+如果两个词段的中心帧距离不超过抑制半径 \texttt{nms\_suppress\_radius}，
+则认为它们可能对应同一段局部动作区域。
+
+其二是时间区间重叠程度。
+如果两个词段在时间上高度重叠，
+或者其中一个词段的大部分区间被另一个词段覆盖，
+系统也会将它们视为竞争候选。
+
+对于存在竞争关系的候选词段，
+系统只保留稳定性分数更高的那个，
+从而抑制边界误报和局部插入误报。
+
+经过上述处理后，
+系统得到按时间顺序排列的最终词段集合 \texttt{final\_segments}。
+每个最终词段都包含 \texttt{label}、\texttt{start\_frame}、\texttt{end\_frame}、\texttt{window\_count}、\texttt{avg\_confidence} 和 \texttt{max\_confidence} 等信息。
+
+最终的 Gloss 序列正是由 \texttt{final\_segments} 生成的。
+设最终词段序列为
+
+\begin{equation}
+final\_segments = \{s_1, s_2, \dots, s_K\}
+\label{eq:chapter06-final-segments}
+\end{equation}
+
+其中各词段已按起始帧升序排列，
+则系统输出的原始 Gloss 序列 \texttt{rawSequence} 定义为
+
+\begin{equation}
+rawSequence = [\,label(s_1),\ label(s_2),\ \dots,\ label(s_K)\,]
+\label{eq:chapter06-raw-sequence}
+\end{equation}
+
+也就是说，
+Gloss 序列并不是直接由逐窗口预测表逐行拼接得到，
+而是经过“窗口判定—原始词段合并—词段过滤—词段级 NMS”之后，
+从最终保留下来的词段标签中按时间顺序依次提取而来。
+
+在服务返回阶段，
+Python 侧会进一步基于 \texttt{rawSequence} 生成中文显示序列 \texttt{rawDisplayZh} 和中文文本结果 \texttt{rawTextZh}，
+但其核心识别输出仍然是上述原始 Gloss 序列。
+
+因此，
+如图~\ref{fig:chapter06-window-predict-to-gloss} 所示的整条处理链路，
+本质上回答了句子视频识别中“Gloss 序列是如何生成的”这一关键问题，
+即系统先从逐窗口概率结果构造稳定的词段，
+再由最终词段映射为句子级 Gloss 序列输出。

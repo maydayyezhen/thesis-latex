@@ -1,0 +1,46 @@
+digraph WindowPredictToGloss {
+    rankdir=TB;
+    graph [
+        dpi=200,
+        bgcolor="white",
+        pad="0.25",
+        ranksep="0.55",
+        nodesep="0.35"
+    ];
+    node [
+        shape=box,
+        style="rounded,filled",
+        fillcolor="#F7FAFF",
+        color="#4A6FA5",
+        fontname="Microsoft YaHei",
+        fontsize=11
+    ];
+    edge [
+        color="#4A6FA5",
+        penwidth=1.2,
+        arrowsize=0.8,
+        fontname="Microsoft YaHei",
+        fontsize=10
+    ];
+
+    x           [label="批量推理输入 X\nNw × 20 × 232", fillcolor="#EAF2FF"];
+    predict     [label="词级分类模型推理\n得到每个窗口的类别概率分布", fillcolor="#E8FFF1"];
+    dense       [label="make_dense_rows\n生成逐窗口预测表 dense_rows\n记录 Top-1 / Top-2 / Top-3、margin、accepted", fillcolor="#FFF7E6"];
+    accept      [label="窗口有效性判定\naccepted = 1\n满足置信度阈值与类别间隔阈值", fillcolor="#FFF0F0"];
+    rawseg      [label="build_raw_segments\n将 accepted 窗口按时间顺序合并为 raw_segments\n同标签且时间接近则合并", fillcolor="#F7FAFF"];
+    filterseg   [label="filter_segments\n过滤 blank、过短片段、低置信度片段\n得到 filtered_segments", fillcolor="#F7FAFF"];
+    nms         [label="nms_segments\n合并相邻同标签词段\n抑制时间重叠的竞争片段\n得到 final_segments", fillcolor="#F7FAFF"];
+    finalseg    [label="final_segments\n按时间顺序保留的最终词段\n包含 label、起止帧、window_count、avg_confidence、max_confidence", fillcolor="#EAF2FF"];
+    rawseq      [label="提取每个 final_segment 的 label\n形成 rawSequence", fillcolor="#E8FFF1"];
+    zh          [label="生成 rawDisplayZh / rawTextZh\n供接口返回展示", fillcolor="#E8FFF1"];
+
+    x -> predict;
+    predict -> dense;
+    dense -> accept;
+    accept -> rawseg;
+    rawseg -> filterseg;
+    filterseg -> nms;
+    nms -> finalseg;
+    finalseg -> rawseq;
+    rawseq -> zh;
+}

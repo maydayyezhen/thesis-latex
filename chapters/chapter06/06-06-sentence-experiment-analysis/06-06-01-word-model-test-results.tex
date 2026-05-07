@@ -2,32 +2,126 @@
 
 \subsection{词级分类模型测试结果}
 
+本节对句子视频识别流程中使用的词级分类模型进行测试结果分析。
+
+该模型使用 WLASL-mini-v2-25 数据集构建，
+覆盖 25 个常用 Gloss 类别。
+
+模型输入为 20 帧时序窗口，
+每帧采用 232 维 plus 特征，
+因此单个样本的输入形状为 $20\times232$。
+
+本次实验共包含 195 个样本，
+其中训练集 125 个样本，
+验证集 25 个样本，
+测试集 45 个样本。
+
+表~\ref{tab:chapter06-word-model-test-result} 给出了词级分类模型在测试集上的主要指标。
+
 \begin{longtable}{L{0.24\textwidth} L{0.22\textwidth} L{0.44\textwidth}}
   \caption{词级分类模型测试结果表}
   \label{tab:chapter06-word-model-test-result}\\
   \toprule
   指标 & 结果 & 说明 \\
   \midrule
-  test\_loss & 待补充 & 测试集损失 \\
-  test\_accuracy & 待补充 & 测试集 Top-1 分类准确率 \\
-  test\_top3\_accuracy & 待补充 & 测试集中真实标签进入 Top-3 的比例 \\
-  train\_count & 待补充 & 训练集样本数量 \\
-  val\_count & 待补充 & 验证集样本数量 \\
-  test\_count & 待补充 & 测试集样本数量 \\
-  class\_count & 待补充 & 词表类别数量 \\
+  test\_loss & 1.1558 & 测试集损失 \\
+  test\_accuracy & 0.7111 & 测试集 Top-1 分类准确率 \\
+  test\_top3\_accuracy & 0.9333 & 测试集中真实标签进入 Top-3 的比例 \\
+  train\_count & 125 & 训练集样本数量 \\
+  val\_count & 25 & 验证集样本数量 \\
+  test\_count & 45 & 测试集样本数量 \\
+  class\_count & 25 & 词表类别数量 \\
   \bottomrule
 \end{longtable}
 
+从表~\ref{tab:chapter06-word-model-test-result} 可以看出，
+模型在测试集上的 Top-1 准确率为 71.11\%，
+Top-3 准确率为 93.33\%。
+
+这说明模型在部分样本上仍存在首位类别误判，
+但多数情况下能够将真实类别保留在前三候选之内。
+
+对于本系统而言，
+这一结果具有重要意义。
+
+句子视频识别并不是仅依赖单个窗口的 Top-1 结果直接输出最终句子，
+而是会在后续流程中结合 Top-K 候选、词段置信度和候选序列约束进行进一步处理。
+
+因此，
+较高的 Top-3 准确率表明模型能够为候选序列生成与语义修正模块提供较有价值的视觉候选基础。
+
+图~\ref{fig:chapter06-word-model-confusion-matrix} 展示了词级分类模型在测试集上的混淆矩阵。
 
 \WhuAutoFigure{0.78\textwidth}{0.48\textheight}{figures/chapter06/word-model-confusion-matrix.png}{词级分类模型混淆矩阵}{fig:chapter06-word-model-confusion-matrix}
 
+结合图~\ref{fig:chapter06-word-model-confusion-matrix} 和错误样本可以看出，
+模型的错误主要集中在少数相似动作或局部姿态容易混淆的类别之间。
 
-\begin{longtable}{L{0.18\textwidth} L{0.18\textwidth} L{0.18\textwidth} L{0.26\textwidth} L{0.20\textwidth}}
+例如，
+\texttt{you} 与 \texttt{yes} 之间存在双向混淆，
+\texttt{want} 容易被预测为 \texttt{today} 或 \texttt{help}，
+\texttt{what} 容易被预测为 \texttt{today} 或 \texttt{language}。
+
+此外，
+\texttt{good}、\texttt{who}、\texttt{why} 等类别也出现了不同程度的误判。
+
+这些错误说明，
+在小样本词级分类场景中，
+仅依靠单一 Top-1 输出容易受到局部手型、运动轨迹和动作边界的影响。
+
+表~\ref{tab:chapter06-word-model-error-analysis} 给出了测试集中的错误样本分析结果。
+
+\begin{longtable}{L{0.14\textwidth} L{0.16\textwidth} L{0.16\textwidth} L{0.34\textwidth} L{0.20\textwidth}}
   \caption{词级分类模型错误样本分析表}
   \label{tab:chapter06-word-model-error-analysis}\\
   \toprule
   样本编号 & 真实 Gloss & 预测 Gloss & Top-3 候选 & 错误说明 \\
   \midrule
-  待补充 & 待补充 & 待补充 & 待补充 & 待补充 \\
+  4 & \texttt{you} & \texttt{yes} & \texttt{yes}(0.6075), \texttt{you}(0.3631), \texttt{language}(0.0185) & 真实标签位于 Top-2，属于首位候选混淆 \\
+  123 & \texttt{yes} & \texttt{you} & \texttt{you}(0.9415), \texttt{yes}(0.0448), \texttt{work}(0.0079) & \texttt{yes} 与 \texttt{you} 混淆明显 \\
+  10 & \texttt{want} & \texttt{today} & \texttt{today}(0.9607), \texttt{want}(0.0328), \texttt{good}(0.0022) & 真实标签位于 Top-2，但 Top-1 置信度较高 \\
+  1 & \texttt{you} & \texttt{yes} & \texttt{yes}(0.7524), \texttt{you}(0.1686), \texttt{deaf}(0.0369) & \texttt{you} 被误判为 \texttt{yes} \\
+  133 & \texttt{what} & \texttt{today} & \texttt{today}(0.8864), \texttt{want}(0.1120), \texttt{family}(0.0003) & 真实标签未进入 Top-3 \\
+  147 & \texttt{who} & \texttt{deaf} & \texttt{deaf}(0.9226), \texttt{who}(0.0220), \texttt{no}(0.0215) & 真实标签位于 Top-2，但概率较低 \\
+  106 & \texttt{good} & \texttt{today} & \texttt{today}(0.8022), \texttt{want}(0.0816), \texttt{friend}(0.0457) & 真实标签未进入 Top-3 \\
+  137 & \texttt{what} & \texttt{language} & \texttt{language}(0.9835), \texttt{what}(0.0097), \texttt{go}(0.0031) & 真实标签位于 Top-2，但概率极低 \\
+  124 & \texttt{yes} & \texttt{you} & \texttt{you}(0.6760), \texttt{no}(0.1669), \texttt{yes}(0.0732) & 真实标签位于 Top-3，存在候选可恢复空间 \\
+  149 & \texttt{why} & \texttt{home} & \texttt{home}(0.5075), \texttt{why}(0.4789), \texttt{deaf}(0.0074) & Top-1 与真实标签概率接近，边界较不确定 \\
+  103 & \texttt{good} & \texttt{who} & \texttt{who}(0.7032), \texttt{good}(0.1184), \texttt{home}(0.0492) & 真实标签位于 Top-2 \\
+  13 & \texttt{want} & \texttt{help} & \texttt{help}(0.7228), \texttt{learn}(0.1340), \texttt{school}(0.1228) & 真实标签未进入 Top-3 \\
+  75 & \texttt{school} & \texttt{work} & \texttt{work}(0.5368), \texttt{help}(0.3173), \texttt{school}(0.1364) & 真实标签位于 Top-3，存在候选可恢复空间 \\
   \bottomrule
 \end{longtable}
+
+由表~\ref{tab:chapter06-word-model-error-analysis} 可知，
+测试集中共有 13 个 Top-1 错误样本。
+
+其中，
+部分错误样本的真实标签仍然位于 Top-2 或 Top-3 候选中，
+例如样本 4、样本 10、样本 124 和样本 75。
+
+这类样本虽然 Top-1 判断错误，
+但模型仍然在候选分布中保留了正确类别，
+因此后续可以通过词段 Top-K 候选和候选序列修正机制进行一定程度的补偿。
+
+与此同时，
+也有部分样本的真实标签未进入 Top-3，
+例如 \texttt{what} 被预测为 \texttt{today}、
+\texttt{good} 被预测为 \texttt{today}、
+\texttt{want} 被预测为 \texttt{help} 等情况。
+
+这类错误说明模型在部分词汇之间仍存在较强混淆，
+后续若继续提升识别性能，
+需要从扩充样本数量、增强动作边界标注质量和优化特征表示等方面进行改进。
+
+总体来看，
+该词级分类模型在 25 类小词表测试集上取得了 71.11\% 的 Top-1 准确率和 93.33\% 的 Top-3 准确率。
+
+虽然 Top-1 准确率仍有提升空间，
+但较高的 Top-3 准确率表明模型能够为大多数测试样本提供有效候选集合。
+
+因此，
+在系统设计中，
+后续句子视频识别流程并未简单依赖单窗口 Top-1 分类结果，
+而是进一步结合滑动窗口词段合并、Top-K 候选保留、候选序列生成和 DeepSeek 受约束语义修正，
+以提升最终句子级识别结果的稳定性和可读性。
